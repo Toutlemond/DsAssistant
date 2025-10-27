@@ -141,6 +141,7 @@ class DeepSeekService
         if (!empty($lastMessageText)) {
             $context = 'Вы не общались какое то время, но последнее предложение написал ты. И оно было такое:" ' . $lastMessageText . '". ';
             $context .= 'Можно напомнить про него а можно начать с чего то другого, тебе решать но учитывай черты личности.';
+            $context .= 'Если в прошлом сообщении ты уже напоминал об этом то стоит сменить тему.';
         }
 
 
@@ -155,8 +156,6 @@ class DeepSeekService
             ['role' => 'user', 'content' => $prompt]
         ];
 
-        print_r($messages);
-        die();
         $response = $this->makeApiRequest($messages, 0.8);
         // todo vb И тут списываем сами на себя так как мы сами вызвали запрос
         return $response['content'];

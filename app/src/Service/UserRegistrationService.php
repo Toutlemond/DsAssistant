@@ -143,6 +143,9 @@ class UserRegistrationService
         $this->userRepository->save($user);
 
         $this->sendWelcomeMessage($user);
+        //todo vb Разобраться с меню
+
+        //$this->sendMainMenu($user->getChatId());
     }
 
     private function sendWelcomeMessage(User $user): void
@@ -166,13 +169,16 @@ class UserRegistrationService
     private function sendMainMenu(int $chatId): void
     {
         $keyboard = $this->telegramBotService->createReplyKeyboard([
-            [['text' => '📝 Профиль'], ['text' => '⚙️ Настройки']],
-            [['text' => '❓ Помощь']]
+            [
+                ['text' => '📝 Профиль','callback_data'=>'profile'],
+                ['text' => '⚙️ Настройки','callback_data'=>'settings']
+            ],
+            [['text' => '❓ Помощь','callback_data'=>'help']]
         ]);
 
         $this->telegramBotService->sendMessage(
             $chatId,
-            "Главное меню:",
+            "Так же пришлю главное Главное меню! ",
             $keyboard
         );
     }
