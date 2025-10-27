@@ -21,12 +21,12 @@ RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd intl zip
 RUN pecl install redis && docker-php-ext-enable redis
 
-# После установки PHP расширений добавить:
-RUN pecl install xdebug \
-    && docker-php-ext-enable xdebug \
+# Установка Xdebug (БЕЗ обратного слеша в конце!)
+RUN pecl install xdebug && docker-php-ext-enable xdebug
 
 # Установка Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
 
 # Создаем пользователя для приложения
 RUN groupadd -g 1000 www
@@ -34,8 +34,12 @@ RUN useradd -u 1000 -ms /bin/bash -g www www
 
 # Копируем код приложения
 COPY app /var/www/html
-# После копирования php.ini добавить копию xdebug конфига:
-COPY xdebug.ini /usr/local/etc/php/conf.d/xdebug.ini
+COPY docker/php/xdebug.ini /usr/local/etc/php/conf.d/xdebug.ini
+COPY docker/php/php.ini /usr/local/etc/php/conf.d/custom.ini
+# Копируем конфиг Xdebug (после установки xdebug)
+# COPY xdebug.ini /usr/local/etc/php/conf.d/xdebug.ini
+# RUN mkdir -p var/log var/cache && chown -R www:www /var/www/html/var && chmod -R 777 /var/www/html/var
+RUN mkdir -p var/log var/cache && chown -R www:www var && chmod -R 755 var
 
 # Меняем владельца файлов
 RUN chown -R www:www /var/www/html
@@ -47,7 +51,7 @@ USER www
 WORKDIR /var/www/html
 
 # Устанавливаем зависимости Symfony (если есть composer.json)
-RUN if [ -f "composer.json" ]; then composer install --no-dev --optimize-autoloader; fi
+RUN if [ -f "composer.json" ]; then composer install --optimize-autoloader; fi
 
 EXPOSE 9000
 CMD ["php-fpm"]

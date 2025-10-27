@@ -36,7 +36,3 @@ services:
     App\Service\UserDiscussionService:
         arguments:
             $discussionLogger: '@monolog.logger.discussion'
-
-    App\Service\InitiativeBotService:
-        arguments:
-            $initiativeLogger: '@monolog.logger.initiative'

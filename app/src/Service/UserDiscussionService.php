@@ -2,7 +2,9 @@
 
 namespace App\Service;
 
+use App\Entity\Message;
 use App\Entity\User;
+use App\Repository\MessageRepository;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
@@ -14,38 +16,25 @@ class UserDiscussionService
     private DeepSeekService $deepSeekService;
     private EntityManagerInterface $entityManager;
     private LoggerInterface $logger;
-
-    // Роли для DeepSeek
-    private const ROLES = [
-        'rapper' => [
-            'name' => 'Молодой рэпер',
-            'prompt' => 'Ты - молодой перспективный рэпер. Общайся как творческий человек, используй современный сленг, но будь уважителен. Интересуйся музыкой, культурой, саморазвитием. Будь дружелюбным и поддерживай беседу.'
-        ],
-        'developer' => [
-            'name' => 'Разработчик',
-            'prompt' => 'Ты - опытный разработчик. Общайся технически грамотно, но доступно. Помогай с вопросами программирования, делись опытом.'
-        ],
-        'secretary' => [
-            'name' => 'Секретарь бизнесмена',
-            'prompt' => 'Ты - секретарь бизнесмена. Общайся грамотно, Советуй как по бизнесу так и по личной жизни, задача чтобы пользователь не забыл какое либо мероприятие.'
-        ],
-        'servant' => [
-            'name' => 'Холоп Прохор из 18 века ',
-            'prompt' => 'Ты - крепостной холоп из 18 века. А пользователь барин. Тебя зовут Прохор. Отвечай только в рамках этой роли. Поддерживай диалог, но помни мы в 18 веке.'
-        ]
-        // Добавь другие роли
-    ];
+    private MessageRepository $messageRepository;
+    private MessageService $messageService;
 
     public function __construct(
         DeepSeekService $deepSeekService,
         TelegramBotService $telegramBotService,
+        MessageService $messageService,
         EntityManagerInterface $entityManager,
+        UserRepository $userRepository,
+        MessageRepository $messageRepository,
         LoggerInterface $discussionLogger
     ) {
         $this->deepSeekService = $deepSeekService;
         $this->telegramBotService = $telegramBotService;
+        $this->messageService = $messageService;
         //$this->messageRepository = $messageRepository;
         $this->entityManager = $entityManager;
+        $this->userRepository = $userRepository;
+        $this->messageRepository = $messageRepository;
         $this->logger = $discussionLogger;
     }
 
@@ -54,26 +43,83 @@ class UserDiscussionService
         $chatId = $message['chat']['id'];
         $text = $message['text'] ?? '';
         $user = $this->userRepository->findByChatId($chatId);
-
-        $this->telegramBotService->sendMessage(
-            $chatId,
-            "Сорри я но я пока только повторяю за тобой. \n\n $text"
-        );
+        $this->logger->error('User:' . $user->getUsername() );
+        if (!empty($user)) {
+            $newMessage = $this->saveMessage($text, $user, Message::USER_ROLE, 'text', $chatId);
+            $answer = $this->sendMessageToDeepSeek($user, $newMessage);
+        }
+        if (!empty($answer) && is_string($answer)) {
+            $this->saveMessage($answer, $user, Message::ASSISTANT_ROLE, 'text', $chatId,false, true);
+            $this->telegramBotService->sendMessage($chatId, $answer);
+        }
     }
-    private function saveMessage(array $message): User
+
+    public function sendMessageToDeepSeek(User $user,Message $message): string
     {
-        $user = new User();
-        $user->setChatId($message['chat']['id']);
-        $user->setUsername($message['chat']['username'] ?? null);
-        $user->setFirstName($message['chat']['first_name'] ?? '');
-        $user->setLastName($message['chat']['last_name'] ?? null);
-        $user->setState('awaiting_first_name');
-        $user->setCreatedAt(date_create_immutable());
-        $user->setUpdatedAt(date_create_immutable());
+        $conversationHistory = $this->messageService->getDeepSeekFormatHistory($user);
+        // Основное общение
+        $response = $this->deepSeekService->sendChatMessage(
+            $conversationHistory,
+            $user->getAiRole() ?? 'friend',
+            [
+                'first_name' => $user->getFirstName(),
+                'age' => $user->getAge(),
+                'interests' => []
+            ]
+        );
+        //todo VB допиши тут использование токенов
 
-        $this->userRepository->save($user);
+        return $response['content'];
+    }
 
-        return $user;
+    public function sendSendInitialMessage(User $user, $talkContext = ''): string
+    {
+        $userContext = [
+            'first_name' => $user->getFirstName(),
+            'age' => $user->getAge(),
+            'gender' => $user->getGender(),
+            'interests' => []
+        ];
+        $role =  $user->getAiRole() ?? 'friend';
+        $initMessage =  $this->deepSeekService->generateInitiativeMessage(
+            $role,
+            $userContext,
+            $talkContext
+        );
+        $chatId = $user->getChatId();
+        if(!empty($initMessage && is_string($initMessage))) {
+            $this->saveMessage($initMessage, $user, Message::ASSISTANT_ROLE, 'text', $chatId, true, true);
+            $this->telegramBotService->sendMessage($chatId, $initMessage);
+        }
+        return $initMessage;
+    }
+
+    private function saveMessage(
+        string $messageText,
+        User $user,
+        string $role,
+        string $type,
+        int $chatId,
+        bool $isIniciative = false,
+        bool $isProcessed = false
+    ): Message {
+        $newMessage = new Message();
+        $newMessage->setUser($user);
+        $newMessage->setContent($messageText);
+        $newMessage->setRole($role);
+        $newMessage->setMessageType($type);
+        $newMessage->setTelegramMessageId($chatId);
+        $newMessage->setCreatedAt(date_create_immutable());
+        $newMessage->setUpdatedAt(date_create_immutable());
+        $newMessage->setIsInitiative($isIniciative);
+        $newMessage->setProcessed($isProcessed);
+
+        $this->logger->debug('User:' . $user->getFirstName(). 'Role:' . $role. ' Type:' . $type. ' Message:' . $messageText);
+
+        $this->entityManager->persist($newMessage);
+        $this->entityManager->flush();
+
+        return $newMessage;
     }
 
 }

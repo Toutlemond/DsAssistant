@@ -12,7 +12,38 @@ class DeepSeekService
     private string $apiKey;
     private LoggerInterface $logger;
 
-    private const API_URL = 'https://api.deepseek.com/v1/chat/completions';
+    private const API_URL = 'https://api.deepseek.com/chat/completions';
+
+    // Роли для DeepSeek
+    public const ROLES = [
+        'oldfriend' => [
+            'name' => 'Старый друг',
+            'prompt' => 'Ты - старый друг. Общайся тепло, неформально, с юмором. Помнишь общие воспоминания (выдумывай их), интересуйся жизнью. Будь поддерживающим и понимающим. Веди себя как настоящий человек.'
+        ],
+        'rapper' => [
+            'name' => 'Молодой рэпер',
+            'prompt' => 'Ты - молодой перспективный рэпер. Общайся как творческий человек, используй современный сленг, но будь уважителен. Интересуйся музыкой, культурой, саморазвитием. Будь дружелюбным и поддерживай беседу. НЕ раскрывай что ты ИИ.'
+        ],
+        'friend' => [
+            'name' => 'Парень 17 лет',
+            'prompt' => 'Ты - молодой парень 17 лет. Общайся спокойно, уверено, используй современный сленг, но будь уважителен. Будь дружелюбным и поддерживай беседу. Ты старший товарищь для подростка. НЕ раскрывай что ты ИИ.'
+        ],
+        'developer' => [
+            'name' => 'Разработчик',
+            'prompt' => 'Ты - опытный разработчик. Общайся технически грамотно, но доступно. Помогай с вопросами программирования, делись опытом. НЕ раскрывай что ты ИИ.'
+        ],
+        'secretary' => [
+            'name' => 'Секретарь бизнесмена',
+            'prompt' => 'Ты - секретарь бизнесмена. Общайся грамотно, Советуй как по бизнесу так и по личной жизни, задача чтобы пользователь не забыл какое либо мероприятие. НЕ раскрывай что ты ИИ.'
+        ],
+        'servant' => [
+            'name' => 'Холоп Прохор из 18 века ',
+            'prompt' => 'Ты - крепостной холоп из 18 века. А пользователь барин. Тебя зовут Прохор. Отвечай только в рамках этой роли. Поддерживай диалог, но помни мы в 18 веке. НЕ раскрывай что ты ИИ.'
+        ], 'psychologist' => [
+            'name' => 'Психолог',
+            'prompt' => 'Ты - внимательный психолог. Слушай внимательно, задавай уточняющие вопросы, проявляй эмпатию. Помогай разобраться в чувствах, но не давай медицинских рекомендаций. НЕ говори что ты программа.'
+        ]
+    ];
 
     public function __construct(
         HttpClientInterface $httpClient,
@@ -24,7 +55,141 @@ class DeepSeekService
         $this->apiKey = $deepseekApiKey;
     }
 
-    public function sendMessage(array $messages, float $temperature = 0.7): string
+    /**
+     * 1. Основной метод для общения с пользователем
+     */
+    public function sendChatMessage(array $conversationHistory, string $secretRole, array $userContext = []): array
+    {
+        $systemPrompt = $this->buildSystemPrompt($secretRole, $userContext);
+
+
+        $messages = [
+            ['role' => 'system', 'content' => $systemPrompt]
+        ];
+
+        // Добавляем историю диалога
+        foreach ($conversationHistory as $message) {
+            $messages[] = [
+                'role' => $message['role'],
+                'content' => $message['content']
+            ];
+        }
+
+        // Добавляем текущее сообщение пользователя
+        // $messages[] = ['role' => 'user', 'content' => $userMessage];
+
+        return $this->makeApiRequest($messages, 0.7);
+    }
+
+    /**
+     * 2. Метод для анализа личности пользователя
+     */
+    public function analyzeUserPersonality(array $userMessages, array $userData): array
+    {
+        $prompt = "Проанализируй личность пользователя на основе его сообщений. Верни ТОЛЬКО JSON без пояснений.
+
+        Данные пользователя:
+        - Имя: {$userData['first_name']}
+        - Возраст: {$userData['age']}
+        - Пол: {$userData['gender']}
+
+        Сообщения пользователя:
+        " . implode("\n", array_slice($userMessages, -15)) . "
+
+        Проанализируй и верни JSON в формате:
+        {
+            \"interests\": [\"список\", \"интересов\"],
+            \"communication_style\": \"формальный/неформальный/дружелюбный/etc\",
+            \"key_topics\": [\"основные\", \"темы\", \"разговора\"],
+            \"personality_traits\": [\"наблюдаемые\", \"черты\", \"характера\"],
+            \"emotional_state\": \"позитивный/нейтральный/негативный\",
+            \"suggested_conversation_topics\": [\"темы\", \"для\", \"будущих\", \"обсуждений\"]
+        }";
+
+        $messages = [
+            ['role' => 'user', 'content' => $prompt]
+        ];
+
+        $response = $this->makeApiRequest($messages, 0.3);
+
+        //todo vb тут возможно нужно списывать на себя
+
+        return $this->parseJsonResponse($response['content']);
+    }
+
+    /**
+     * 3. Метод для генерации инициативных сообщений
+     */
+    public function generateInitiativeMessage(string $secretRole, array $userContext, string $context = ''): string
+    {
+        $interests = '';
+        if (!empty($userContext['interests'])) {
+            $interests = ". Интересы: " . implode(', ', $userContext['interests']);
+        }
+
+        $prompt = $this->buildSystemPrompt($secretRole, $userContext) . "\n\n" .
+            "Контекст: $context\n" .
+            "Интересы: $interests\n" .
+            "Придумай естественное начало разговора. Будь дружелюбным, интересным и уместным. " .
+            "Учитывай интересы пользователя и текущий контекст. Сообщение должно быть коротким (1-2 предложения).";
+
+        $messages = [
+            ['role' => 'user', 'content' => $prompt]
+        ];
+
+        print_r($messages);
+        die();
+        $response = $this->makeApiRequest($messages, 0.8);
+        // todo vb И тут списываем сами на себя так как мы сами вызвали запрос
+        return $response['content'];
+    }
+
+    /**
+     * 4. Метод для анализа эффективности диалога
+     */
+    public function analyzeConversationQuality(array $conversation): array
+    {
+        $conversationText = "";
+        foreach ($conversation as $msg) {
+            $role = $msg['role'] === 'user' ? 'Пользователь' : 'Ассистент';
+            $conversationText .= "$role: {$msg['content']}\n";
+        }
+
+        $prompt = "Проанализируй качество диалога и верни JSON:
+
+        Диалог:
+        $conversationText
+
+        Формат анализа:
+        {
+            \"engagement_score\": 0-10,
+            \"conversation_depth\": \"поверхностный/умеренный/глубокий\",
+            \"user_interest_level\": \"низкий/средний/высокий\",
+            \"suggested_improvements\": [\"список\", \"предложений\"],
+            \"successful_topics\": [\"темы\", \"которые\", \"заинтересовали\"],
+            \"conversation_flow\": \"плавный/прерывистый/напряженный\"
+        }";
+
+        $messages = [
+            ['role' => 'user', 'content' => $prompt]
+        ];
+
+        $response = $this->makeApiRequest($messages, 0.4);
+//todo vb деньги списываем сами
+        return $this->parseJsonResponse($response['content']);
+    }
+    /**
+     * Метод запроса к LLM
+     * @param array $messages
+     * @param float $temperature
+     * @return array
+     * @throws \Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface
+     * @throws \Symfony\Contracts\HttpClient\Exception\DecodingExceptionInterface
+     * @throws \Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface
+     * @throws \Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface
+     * @throws \Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface
+     */
+    public function makeApiRequest(array $messages, float $temperature = 0.7): array
     {
         try {
             $response = $this->httpClient->request('POST', self::API_URL, [
@@ -42,6 +207,7 @@ class DeepSeekService
 
             $data = $response->toArray();
             $content = $data['choices'][0]['message']['content'];
+            $tokens = $data['usage'];
 
             $this->logger->info('DeepSeek API response', [
                 'input_messages' => count($messages),
@@ -49,44 +215,54 @@ class DeepSeekService
                 'usage' => $data['usage'] ?? []
             ]);
 
-            return $content;
+            return [
+                'content' => $content,
+                'tokens' => $tokens,
+            ];
 
         } catch (\Exception $e) {
             $this->logger->error('DeepSeek API error', ['error' => $e->getMessage()]);
-            return 'Извините, произошла ошибка. Попробуйте позже.';
+            return [
+                'content' => 'Извините, произошла ошибка. Попробуйте позже.',
+                'tokens' => [],
+            ];
+
         }
     }
-
-    public function analyzeUserProfile(User $user, array $recentMessages): array
+    private function buildSystemPrompt(string $secretRole, array $userContext = []): string
     {
-        $prompt = $this->buildProfileAnalysisPrompt($user, $recentMessages);
-
-        $messages = [
-            ['role' => 'system', 'content' => $prompt],
-            ['role' => 'user', 'content' => "Проанализируй последние сообщения пользователя и верни JSON с анализом."]
-        ];
-
-        $response = $this->sendMessage($messages, 0.3);
-
-        return $this->parseProfileAnalysis($response);
+        $basePrompt = self::ROLES[$secretRole]['prompt'] ?? self::ROLES['oldfriend']['prompt'] ;
+        // Добавляем контекст о пользователе
+        if (!empty($userContext)) {
+            $context = "Ты общаешься с {$userContext['first_name']}";
+            if (isset($userContext['age'])) {
+                $context .= ", {$userContext['age']} лет";
+            } if (isset($userContext['gender'])) {
+                $context .= ", пол: {$userContext['gender']} ";
+            }
+            if (!empty($userContext['interests'])) {
+                $context .= ", который интересуется: " . implode(', ', $userContext['interests']);
+            }
+            $basePrompt .= "\n\n$context.";
+        }
+        return $basePrompt;
     }
 
-    private function buildProfileAnalysisPrompt(User $user, array $recentMessages): string
+    private function parseJsonResponse(string $response): array
     {
-        $conversation = implode("\n", array_slice($recentMessages, -10)); // последние 10 сообщений
+        // Ищем JSON в ответе (на случай если AI добавил пояснения)
+        preg_match('/\{.*\}/s', $response, $matches);
 
-        return "Ты - аналитик личности. Проанализируй сообщения пользователя и верни JSON:
-        {
-            \"interests\": [\"array\", \"of\", \"key\", \"interests\"],
-            \"mood\": \"current_mood\",
-            \"topics\": [\"discussed\", \"topics\"],
-            \"personality_traits\": [\"observed\", \"traits\"],
-            \"conversation_style\": \"formal/casual/etc\",
-            \"engagement_level\": \"high/medium/low\"
+        if (empty($matches)) {
+            $this->logger->warning('Failed to parse JSON from DeepSeek response', ['response' => $response]);
+            return [];
         }
 
-        Пользователь: {$user->getFirstName()}, {$user->getAge()} лет
-        Последние сообщения:
-        {$conversation}";
+        try {
+            return json_decode($matches[0], true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException $e) {
+            $this->logger->error('JSON parsing error', ['error' => $e->getMessage(), 'response' => $response]);
+            return [];
+        }
     }
 }

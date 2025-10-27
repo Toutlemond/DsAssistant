@@ -1,0 +1,6 @@
+/symfony/var/log/discussion.log
+/symfony/var/log/dev.log
+/symfony/var/log/deepseek.log
+/symfony/var/log/xdebug.log
+/app/.env.dev
+/app/.env.local

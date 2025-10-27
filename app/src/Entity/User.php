@@ -48,6 +48,25 @@ class User
     #[ORM\OneToMany(targetEntity: Message::class, mappedBy: 'user')]
     private Collection $messages;
 
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $aiRole = null;
+
+    #[ORM\Column(type: 'json', nullable: true)]
+    private ?array $interests = null;
+
+    #[ORM\Column(type: 'json', nullable: true)]
+    private ?array $personalityTraits = null;
+
+    #[ORM\Column(type: 'json', nullable: true)]
+    private ?array $conversationStats = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?\DateTimeImmutable $lastAnalysisAt = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?\DateTimeImmutable $lastInitiativeAt = null;
+
+
     public function __construct()
     {
         $this->messages = new ArrayCollection();
@@ -62,6 +81,15 @@ class User
         return $this->messages;
     }
 
+    public function getUserContext()
+    {
+       return [
+            'first_name' => $this->getFirstName(),
+            'age' => $this->getAge(),
+            'gender' => $this->getGender(),
+            'interests' => $this->getInterests()
+        ];
+    }
     public function addMessage(Message $message): static
     {
         if (!$this->messages->contains($message)) {
@@ -208,4 +236,84 @@ class User
 
         return $this;
     }
+
+    public function getAiRole(): ?string
+    {
+        return $this->aiRole;
+    }
+
+    public function setAiRole(?string $aiRole): static
+    {
+        $this->aiRole = $aiRole;
+
+        return $this;
+    }
+
+    public function getInterests(): ?array
+    {
+        return $this->interests ?? [];
+    }
+
+    public function setInterests(?array $interests): static
+    {
+        $this->interests = $interests;
+        return $this;
+    }
+
+    public function addInterest(string $interest): static
+    {
+        if (!in_array($interest, $this->getInterests(), true)) {
+            $this->interests[] = $interest;
+        }
+        return $this;
+    }
+
+    public function getPersonalityTraits(): ?array
+    {
+        return $this->personalityTraits ?? [];
+    }
+
+    public function setPersonalityTraits(?array $personalityTraits): static
+    {
+        $this->personalityTraits = $personalityTraits;
+        return $this;
+    }
+
+    public function getConversationStats(): ?array
+    {
+        return $this->conversationStats ?? [
+            'total_messages' => 0,
+            'engagement_score' => 0,
+            'favorite_topics' => []
+        ];
+    }
+
+    public function setConversationStats(?array $conversationStats): static
+    {
+        $this->conversationStats = $conversationStats;
+        return $this;
+    }
+
+    public function getLastAnalysisAt(): ?\DateTimeImmutable
+    {
+        return $this->lastAnalysisAt;
+    }
+
+    public function setLastAnalysisAt(?\DateTimeImmutable $lastAnalysisAt): static
+    {
+        $this->lastAnalysisAt = $lastAnalysisAt;
+        return $this;
+    }
+
+    public function getLastInitiativeAt(): ?\DateTimeImmutable
+    {
+        return $this->lastInitiativeAt;
+    }
+
+    public function setLastInitiativeAt(?\DateTimeImmutable $lastInitiativeAt): static
+    {
+        $this->lastInitiativeAt = $lastInitiativeAt;
+        return $this;
+    }
+
 }

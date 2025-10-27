@@ -52,6 +52,14 @@ class Message
     #[ORM\Column(nullable: true)]
     private ?bool $usedForAnalysis = false;
 
+    #[ORM\Column(nullable: true)]
+    private ?bool $processed = null;
+
+    public const USER_ROLE =  'user';
+    public const ASSISTANT_ROLE =  'assistant';
+    public const SYSTEM_ROLE =   'system';
+
+
     public function __construct()
     {
         $this->createdAt = new \DateTimeImmutable();
@@ -200,6 +208,18 @@ class Message
     public function setUsedForAnalysis(?bool $usedForAnalysis): static
     {
         $this->usedForAnalysis = $usedForAnalysis;
+        return $this;
+    }
+
+    public function isProcessed(): ?bool
+    {
+        return $this->processed;
+    }
+
+    public function setProcessed(?bool $processed): static
+    {
+        $this->processed = $processed;
+
         return $this;
     }
 }

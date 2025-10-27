@@ -14,6 +14,11 @@ class MessageService
         private EntityManagerInterface $entityManager
     ) {}
 
+    public function send()
+    {
+
+    }
+
     public function createMessage(
         User $user,
         string $content,
@@ -23,6 +28,7 @@ class MessageService
         ?int $tokens = null,
         ?array $metadata = null,
         ?bool $isInitiative = false,
+        bool $isProcessed = false,
         ?string $initiativeTrigger = null
     ): Message {
         $message = new Message();
@@ -34,6 +40,7 @@ class MessageService
         $message->setTokens($tokens);
         $message->setMetadata($metadata);
         $message->setIsInitiative($isInitiative);
+        $message->setProcessed($isProcessed);
         $message->setInitiativeTrigger($initiativeTrigger);
 
         $this->messageRepository->save($message);
