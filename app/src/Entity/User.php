@@ -81,13 +81,19 @@ class User
         return $this->messages;
     }
 
+    public function getLastMessage(): ?Message
+    {
+        return $this->messages->last();
+    }
+
     public function getUserContext()
     {
        return [
             'first_name' => $this->getFirstName(),
             'age' => $this->getAge(),
             'gender' => $this->getGender(),
-            'interests' => $this->getInterests()
+            'interests' => $this->getInterests(),
+            'personality' => $this->getPersonalityTraits()
         ];
     }
     public function addMessage(Message $message): static

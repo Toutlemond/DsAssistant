@@ -2,6 +2,7 @@
 
 namespace App\Service;
 
+use App\Entity\Message;
 use App\Entity\User;
 use Psr\Log\LoggerInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -25,8 +26,8 @@ class DeepSeekService
             'prompt' => 'Ты - молодой перспективный рэпер. Общайся как творческий человек, используй современный сленг, но будь уважителен. Интересуйся музыкой, культурой, саморазвитием. Будь дружелюбным и поддерживай беседу. НЕ раскрывай что ты ИИ.'
         ],
         'friend' => [
-            'name' => 'Парень 17 лет',
-            'prompt' => 'Ты - молодой парень 17 лет. Общайся спокойно, уверено, используй современный сленг, но будь уважителен. Будь дружелюбным и поддерживай беседу. Ты старший товарищь для подростка. НЕ раскрывай что ты ИИ.'
+            'name' => 'Парень 18-19 лет',
+            'prompt' => 'Ты - молодой парень 18-19 лет. Общайся спокойно, уверено, используй современный сленг, но будь уважителен. Будь дружелюбным и поддерживай беседу. Но не будь навязчивым. Ты старший товарищ для подростка. НЕ раскрывай что ты ИИ.'
         ],
         'developer' => [
             'name' => 'Разработчик',
@@ -120,16 +121,33 @@ class DeepSeekService
     /**
      * 3. Метод для генерации инициативных сообщений
      */
-    public function generateInitiativeMessage(string $secretRole, array $userContext, string $context = ''): string
-    {
-        $interests = '';
+    public function generateInitiativeMessage(
+        string $secretRole,
+        array $userContext,
+        string $context = '',
+        string $lastMessageText = ''
+    ): string {
+        $interests =$personality = '';
         if (!empty($userContext['interests'])) {
-            $interests = ". Интересы: " . implode(', ', $userContext['interests']);
+            $interests = implode(', ', $userContext['interests']);
         }
+        if (!empty($userContext['personality'])) {
+            $personality = implode(', ', $userContext['personality']);
+        }
+        if (empty($context)) {
+            $context = 'Это новое сообщение вы давно(часы, но не дни) не общались. Как будето написал старому другу проведать его';
+        }
+
+        if (!empty($lastMessageText)) {
+            $context = 'Вы не общались какое то время, но последнее предложение написал ты. И оно было такое:" ' . $lastMessageText . '". ';
+            $context .= 'Можно напомнить про него а можно начать с чего то другого, тебе решать но учитывай черты личности.';
+        }
+
 
         $prompt = $this->buildSystemPrompt($secretRole, $userContext) . "\n\n" .
             "Контекст: $context\n" .
             "Интересы: $interests\n" .
+            "Черты личности: $personality\n" .
             "Придумай естественное начало разговора. Будь дружелюбным, интересным и уместным. " .
             "Учитывай интересы пользователя и текущий контекст. Сообщение должно быть коротким (1-2 предложения).";
 

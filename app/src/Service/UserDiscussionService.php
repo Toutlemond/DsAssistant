@@ -74,17 +74,19 @@ class UserDiscussionService
 
     public function sendSendInitialMessage(User $user, $talkContext = ''): string
     {
-        $userContext = [
-            'first_name' => $user->getFirstName(),
-            'age' => $user->getAge(),
-            'gender' => $user->getGender(),
-            'interests' => []
-        ];
+        $userContext = $user->getUserContext();
         $role =  $user->getAiRole() ?? 'friend';
+        $lastMessage = $user->getLastMessage();
+
+        if (!empty($lastMessage) && $lastMessage->getRole() === Message::ASSISTANT_ROLE){
+            $lastMessageText = $lastMessage->getContent();
+        }
+
         $initMessage =  $this->deepSeekService->generateInitiativeMessage(
             $role,
             $userContext,
-            $talkContext
+            $talkContext,
+            $lastMessageText ?? ''
         );
         $chatId = $user->getChatId();
         if(!empty($initMessage && is_string($initMessage))) {
