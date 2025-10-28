@@ -71,6 +71,7 @@ class UserDiscussionService
 
         // Основное общение
         $response = $this->deepSeekService->sendChatMessage(
+            $message,
             $conversationHistory,
             $user->getAiRole() ?? 'friend',
             $user->getUserContext()
@@ -114,7 +115,7 @@ class UserDiscussionService
         return $initMessage;
     }
 
-    private function saveMessage(
+    public function saveMessage(
         string $messageText,
         User $user,
         string $role,

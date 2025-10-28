@@ -5,6 +5,7 @@ namespace App\Command;
 use App\Entity\Message;
 use App\Repository\MessageRepository;
 use App\Repository\UserRepository;
+use App\Service\TelegramBotService;
 use App\Service\UserDiscussionService;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -22,11 +23,17 @@ class MessagesSendOneToDeepSeekCommand extends Command
 {
     private MessageRepository $messageRepository;
     private UserDiscussionService $userDiscussionService;
+    private TelegramBotService $telegramBotService;
 
-    public function __construct(MessageRepository $messageRepository, UserDiscussionService $userDiscussionService )
+    public function __construct(
+        MessageRepository $messageRepository,
+        UserDiscussionService $userDiscussionService,
+        TelegramBotService $telegramBotService
+    )
     {
         $this->messageRepository = $messageRepository;
         $this->userDiscussionService = $userDiscussionService;
+        $this->telegramBotService = $telegramBotService;
         parent::__construct();
     }
 
@@ -59,9 +66,24 @@ class MessagesSendOneToDeepSeekCommand extends Command
             $io->error('User not found');
             return Command::FAILURE;
         }
-        $response = $this->userDiscussionService->sendMessageToDeepSeek($user,$message);
 
-        $io->success($response['content']);
+        $answer = $this->userDiscussionService->sendMessageToDeepSeek($user, $message);
+
+        if (!empty($answer) && !empty($answer['content']) && is_string($answer['content'])) {
+            $this->userDiscussionService->saveMessage(
+                $answer['content'],
+                $user,
+                Message::ASSISTANT_ROLE,
+                'text',
+                $user->getChatId(),
+                false,
+                true,
+                $answer
+            );
+            $this->telegramBotService->sendMessage($user->getChatId(), $answer['content']);
+        }
+
+        $io->success($answer['content']);
 
         return Command::SUCCESS;
     }

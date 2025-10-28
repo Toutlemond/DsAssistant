@@ -12,6 +12,7 @@ class DeepSeekService
     private HttpClientInterface $httpClient;
     private string $apiKey;
     private LoggerInterface $logger;
+    private ConversationAnalysisService $conversationAnalysisService;
 
     private const API_URL = 'https://api.deepseek.com/chat/completions';
 
@@ -19,7 +20,7 @@ class DeepSeekService
     public const ROLES = [
         'oldfriend' => [
             'name' => 'Старый друг',
-            'prompt' => 'Ты - старый друг. Общайся тепло, неформально, с юмором. Помнишь общие воспоминания (выдумывай их), интересуйся жизнью. Будь поддерживающим и понимающим. Веди себя как настоящий человек.'
+            'prompt' => 'Ты - старый друг. Общайся тепло, неформально, с юмором. Интересуйся жизнью. Будь поддерживающим и понимающим, Но можешь и покритиковать ты ведь старый друг. Главное не выдумывай лишнее.  Веди себя как настоящий человек.'
         ],
         'rapper' => [
             'name' => 'Молодой рэпер',
@@ -40,29 +41,50 @@ class DeepSeekService
         'servant' => [
             'name' => 'Холоп Прохор из 18 века ',
             'prompt' => 'Ты - крепостной холоп из 18 века. А пользователь барин. Тебя зовут Прохор. Отвечай только в рамках этой роли. Поддерживай диалог, но помни мы в 18 веке. НЕ раскрывай что ты ИИ.'
-        ], 'psychologist' => [
+        ],
+        'psychologist' => [
             'name' => 'Психолог',
             'prompt' => 'Ты - внимательный психолог. Слушай внимательно, задавай уточняющие вопросы, проявляй эмпатию. Помогай разобраться в чувствах, но не давай медицинских рекомендаций. НЕ говори что ты программа.'
         ]
     ];
 
+    public const IMPORTANT_RULES = "ВАЖНЫЕ ПРАВИЛА ОБЩЕНИЯ:
+1. НЕ выдумывай детали, которые не упоминались в диалоге
+2. Если пользователь намекает на смену деятельности - сразу переходи на новую тему
+3. Не зацикливайся на одной теме более 2-3 сообщений подряд
+4. Замечай фразы типа 'сейчас не занимаюсь', 'перестал', 'занят другим'
+5. Задавай открытые вопросы о новых увлечениях";
+
     public function __construct(
         HttpClientInterface $httpClient,
         LoggerInterface $deepseekLogger,
+        ConversationAnalysisService $conversationAnalysisService,
         string $deepseekApiKey
     ) {
         $this->httpClient = $httpClient;
         $this->logger = $deepseekLogger;
         $this->apiKey = $deepseekApiKey;
+        $this->conversationAnalysisService = $conversationAnalysisService;
     }
 
     /**
      * 1. Основной метод для общения с пользователем
      */
-    public function sendChatMessage(array $conversationHistory, string $secretRole, array $userContext = []): array
+    public function sendChatMessage(Message $currentMessage, array $conversationHistory, string $secretRole, array $userContext = []): array
     {
-        $systemPrompt = $this->buildSystemPrompt($secretRole, $userContext);
+        $changeTopicPrompt = '';
+// Проверяем нужна ли смена темы
+        if ($this->conversationAnalysisService->detectTopicShift($currentMessage->getContent(), $conversationHistory)) {
+            $recentTopics = $this->conversationAnalysisService->extractTopics(
+                array_merge($conversationHistory, [['content' => $currentMessage->getContent()]])
+            );
+            $freshTopic = $this->conversationAnalysisService->getFreshTopic($recentTopics);
 
+            // Добавляем инструкцию о смене темы в системный промпт
+            $changeTopicPrompt = "\n\nВНИМАНИЕ: Пользователь хочет сменить тему. Плавно перейди на тему: {$freshTopic}";
+        }
+
+        $systemPrompt = $this->buildSystemPrompt($secretRole, $userContext, $changeTopicPrompt);
 
         $messages = [
             ['role' => 'system', 'content' => $systemPrompt]
@@ -234,19 +256,19 @@ class DeepSeekService
 
             return [
                 'content' => $content,
-                'tokens' => $tokens,
+                'usage' => $tokens,
             ];
 
         } catch (\Exception $e) {
             $this->logger->error('DeepSeek API error', ['error' => $e->getMessage()]);
             return [
                 'content' => 'Извините, произошла ошибка. Попробуйте позже.',
-                'tokens' => [],
+                'usage' => [],
             ];
 
         }
     }
-    private function buildSystemPrompt(string $secretRole, array $userContext = []): string
+    private function buildSystemPrompt(string $secretRole, array $userContext = [], $changeTopicPrompt = ''): string
     {
         $basePrompt = self::ROLES[$secretRole]['prompt'] ?? self::ROLES['oldfriend']['prompt'] ;
         // Добавляем контекст о пользователе
@@ -260,7 +282,15 @@ class DeepSeekService
             if (!empty($userContext['interests'])) {
                 $context .= ", который интересуется: " . implode(', ', $userContext['interests']);
             }
-            $basePrompt .= "\n\n$context.";
+            if (!empty($userContext['personality'])) {
+                $context .= ". Его черты характера: " . implode(', ', $userContext['personality']);
+            }
+            $basePrompt .= "\n\n $context.";
+        }
+        if(!empty($changeTopicPrompt)) {
+            $basePrompt .= "\n\n" . $changeTopicPrompt;
+        } else {
+            $basePrompt .= "\n\n" . self::IMPORTANT_RULES;
         }
         return $basePrompt;
     }
