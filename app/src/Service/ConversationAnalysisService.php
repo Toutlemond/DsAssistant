@@ -2,6 +2,8 @@
 
 namespace App\Service;
 
+use App\Entity\Message;
+
 class ConversationAnalysisService
 {
     private const TOPIC_CATEGORIES = [
@@ -16,6 +18,18 @@ class ConversationAnalysisService
     public function detectTopicShift(string $currentMessage, array $recentHistory): bool
     {
         $message = mb_strtolower($currentMessage);
+
+        $lastThreeMessage = array_slice($recentHistory, -3);
+        $isAssist = 0;
+
+        foreach ($lastThreeMessage as $mess) {
+            if ($mess['role'] === Message::ASSISTANT_ROLE) {
+                $isAssist++;
+            }
+        }
+        if ($isAssist >= 3) {
+            return true;
+        }
 
         // Детектим явные указания на смену деятельности
         $shiftPatterns = [

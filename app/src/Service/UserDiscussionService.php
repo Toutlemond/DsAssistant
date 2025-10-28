@@ -100,12 +100,14 @@ class UserDiscussionService
         if (!empty($lastMessage) && $lastMessage->getRole() === Message::ASSISTANT_ROLE){
             $lastMessageText = $lastMessage->getContent();
         }
+        $conversationHistory = $this->messageService->getDeepSeekFormatHistory($user);
 
         $initMessage =  $this->deepSeekService->generateInitiativeMessage(
             $role,
             $userContext,
             $talkContext,
-            $lastMessageText ?? ''
+            $lastMessageText ?? '',
+            $conversationHistory
         );
         $chatId = $user->getChatId();
         if(!empty($initMessage && is_string($initMessage))) {

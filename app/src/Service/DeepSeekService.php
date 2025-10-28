@@ -73,7 +73,7 @@ class DeepSeekService
     public function sendChatMessage(Message $currentMessage, array $conversationHistory, string $secretRole, array $userContext = []): array
     {
         $changeTopicPrompt = '';
-// Проверяем нужна ли смена темы
+        // Проверяем нужна ли смена темы
         if ($this->conversationAnalysisService->detectTopicShift($currentMessage->getContent(), $conversationHistory)) {
             $recentTopics = $this->conversationAnalysisService->extractTopics(
                 array_merge($conversationHistory, [['content' => $currentMessage->getContent()]])
@@ -147,7 +147,8 @@ class DeepSeekService
         string $secretRole,
         array $userContext,
         string $context = '',
-        string $lastMessageText = ''
+        string $lastMessageText = '',
+        array $conversationHistory
     ): string {
         $interests =$personality = '';
         if (!empty($userContext['interests'])) {
@@ -157,22 +158,33 @@ class DeepSeekService
             $personality = implode(', ', $userContext['personality']);
         }
         if (empty($context)) {
-            $context = 'Это новое сообщение вы давно(часы, но не дни) не общались. Как будето написал старому другу проведать его';
+            $context = 'Это новое сообщение вы давно(часы или дни) не общались. Как будето написал старому другу проведать его';
         }
 
-        if (!empty($lastMessageText)) {
-            $context = 'Вы не общались какое то время, но последнее предложение написал ты. И оно было такое:" ' . $lastMessageText . '". ';
-            $context .= 'Можно напомнить про него а можно начать с чего то другого, тебе решать но учитывай черты личности.';
-            $context .= 'Если в прошлом сообщении ты уже напоминал об этом то стоит сменить тему.';
+//        if (!empty($lastMessageText)) {
+//            $context = 'Вы не общались какое то время, но последнее предложение написал ты. И оно было такое:" ' . $lastMessageText . '". ';
+//            $context .= 'Можно напомнить про него, а можно начать с чего то другого, тебе решать но учитывай черты личности.';
+//        }
+
+
+        // Проверяем нужна ли смена темы
+        if ($this->conversationAnalysisService->detectTopicShift($lastMessageText, $conversationHistory)) {
+            $recentTopics = $this->conversationAnalysisService->extractTopics(
+                array_merge($conversationHistory, [['content' => $lastMessageText]])
+            );
+            $freshTopic = $this->conversationAnalysisService->getFreshTopic($recentTopics);
+            // Добавляем инструкцию о смене темы в системный промпт
+            $changeTopicPrompt = "\n\nВНИМАНИЕ: Пользователь хочет сменить тему. Плавно перейди на тему: {$freshTopic}";
         }
 
-
-        $prompt = $this->buildSystemPrompt($secretRole, $userContext) . "\n\n" .
+        $prompt = $this->buildSystemPrompt($secretRole, $userContext,$changeTopicPrompt) . "\n\n" .
             "Контекст: $context\n" .
             "Интересы: $interests\n" .
             "Черты личности: $personality\n" .
             "Придумай естественное начало разговора. Будь дружелюбным, интересным и уместным. " .
             "Учитывай интересы пользователя и текущий контекст. Сообщение должно быть коротким (1-2 предложения).";
+
+        $this->logger->info('DeepSeek API prompt', ['prompt' => $prompt]);
 
         $messages = [
             ['role' => 'user', 'content' => $prompt]
