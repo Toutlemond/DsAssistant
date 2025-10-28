@@ -48,28 +48,46 @@ class UserDiscussionService
             $newMessage = $this->saveMessage($text, $user, Message::USER_ROLE, 'text', $chatId);
             $answer = $this->sendMessageToDeepSeek($user, $newMessage);
         }
-        if (!empty($answer) && is_string($answer)) {
-            $this->saveMessage($answer, $user, Message::ASSISTANT_ROLE, 'text', $chatId,false, true);
-            $this->telegramBotService->sendMessage($chatId, $answer);
+        if (!empty($answer) && !empty($answer['content']) && is_string($answer['content'])) {
+            $this->saveMessage(
+                $answer['content'],
+                $user,
+                Message::ASSISTANT_ROLE,
+                'text',
+                $chatId,
+                false,
+                true,
+                $answer
+            );
+            $this->telegramBotService->sendMessage($chatId, $answer['content']);
         }
     }
 
-    public function sendMessageToDeepSeek(User $user,Message $message): string
+    public function sendMessageToDeepSeek(User $user,Message $message): array
     {
         $conversationHistory = $this->messageService->getDeepSeekFormatHistory($user);
+
+        // todo vb тут нужно менять контекст если почуяли недладное
+
         // Основное общение
         $response = $this->deepSeekService->sendChatMessage(
             $conversationHistory,
             $user->getAiRole() ?? 'friend',
-            [
-                'first_name' => $user->getFirstName(),
-                'age' => $user->getAge(),
-                'interests' => []
-            ]
+            $user->getUserContext()
         );
         //todo VB допиши тут использование токенов
 
-        return $response['content'];
+        // Обновляем статистику пользователя
+        if ($response['usage']) {
+            $user->addTokenUsage(
+                $response['usage']['prompt_tokens'],
+                $response['usage']['completion_tokens']
+            );
+        }
+
+        $this->entityManager->flush();
+
+        return $response;
     }
 
     public function sendSendInitialMessage(User $user, $talkContext = ''): string
@@ -103,7 +121,8 @@ class UserDiscussionService
         string $type,
         int $chatId,
         bool $isIniciative = false,
-        bool $isProcessed = false
+        bool $isProcessed = false,
+        array $tokenArray = []
     ): Message {
         $newMessage = new Message();
         $newMessage->setUser($user);
@@ -116,6 +135,13 @@ class UserDiscussionService
         $newMessage->setIsInitiative($isIniciative);
         $newMessage->setProcessed($isProcessed);
 
+        if (!empty($tokenArray)) {
+            $newMessage->setTotalTokens($tokenArray['usage']['total_tokens'] ?? 0);
+            $newMessage->setPromptTokens($tokenArray['usage']['prompt_tokens'] ?? 0);
+            $newMessage->setCompletionTokens($tokenArray['usage']['completion_tokens'] ?? 0);
+            $newMessage->setTokenDetails($tokenArray['usage'] ?? []);
+        }
+
         $this->logger->debug('User:' . $user->getFirstName(). 'Role:' . $role. ' Type:' . $type. ' Message:' . $messageText);
 
         $this->entityManager->persist($newMessage);
@@ -123,5 +149,4 @@ class UserDiscussionService
 
         return $newMessage;
     }
-
 }

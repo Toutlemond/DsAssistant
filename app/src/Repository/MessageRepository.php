@@ -22,15 +22,18 @@ class MessageRepository extends ServiceEntityRepository
      */
     public function findConversationHistory(User $user, int $limit = 10): array
     {
-        return $this->createQueryBuilder('m')
+        $rows = $this->createQueryBuilder('m')
             ->where('m.user = :user')
             ->andWhere('m.role IN (:roles)')
             ->setParameter('user', $user)
             ->setParameter('roles', ['user', 'assistant'])
-            ->orderBy('m.createdAt', 'ASC')
+            ->orderBy('m.id', 'DESC')
             ->setMaxResults($limit)
             ->getQuery()
             ->getResult();
+
+
+        return array_reverse($rows); // теперь от меньшего к большему
     }
 
     /**

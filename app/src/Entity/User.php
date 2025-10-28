@@ -66,7 +66,17 @@ class User
     #[ORM\Column(nullable: true)]
     private ?\DateTimeImmutable $lastInitiativeAt = null;
 
+    #[ORM\Column(type: 'integer', options: ['default' => 0])]
+    private int $totalTokensUsed = 0;
 
+    #[ORM\Column(type: 'integer', options: ['default' => 0])]
+    private int $promptTokensUsed = 0;
+
+    #[ORM\Column(type: 'integer', options: ['default' => 0])]
+    private int $completionTokensUsed = 0;
+
+    #[ORM\Column(type: 'json', nullable: true)]
+    private ?array $tokenUsageStats = null;
     public function __construct()
     {
         $this->messages = new ArrayCollection();
@@ -321,5 +331,35 @@ class User
         $this->lastInitiativeAt = $lastInitiativeAt;
         return $this;
     }
+    public function getTotalTokensUsed(): int
+    {
+        return $this->totalTokensUsed;
+    }
 
+    public function addTokenUsage(int $promptTokens, int $completionTokens): static
+    {
+        $this->promptTokensUsed += $promptTokens;
+        $this->completionTokensUsed += $completionTokens;
+        $this->totalTokensUsed += ($promptTokens + $completionTokens);
+
+        // Обновляем статистику
+        $stats = $this->tokenUsageStats ?? [
+            'daily_usage' => [],
+            'average_prompt_tokens' => 0,
+            'average_completion_tokens' => 0,
+            'requests_count' => 0
+        ];
+
+        $stats['requests_count']++;
+        $stats['average_prompt_tokens'] = $this->promptTokensUsed / $stats['requests_count'];
+        $stats['average_completion_tokens'] = $this->completionTokensUsed / $stats['requests_count'];
+
+        // Ежедневная статистика
+        $today = (new \DateTime())->format('Y-m-d');
+        $stats['daily_usage'][$today] = ($stats['daily_usage'][$today] ?? 0) + ($promptTokens + $completionTokens);
+
+        $this->tokenUsageStats = $stats;
+
+        return $this;
+    }
 }

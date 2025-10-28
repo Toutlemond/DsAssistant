@@ -55,6 +55,18 @@ class Message
     #[ORM\Column(nullable: true)]
     private ?bool $processed = null;
 
+    #[ORM\Column(nullable: true)]
+    private ?int $promptTokens = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $completionTokens = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $totalTokens = null;
+
+    #[ORM\Column(type: 'json', nullable: true)]
+    private ?array $tokenDetails = null;
+
     public const USER_ROLE =  'user';
     public const ASSISTANT_ROLE =  'assistant';
     public const SYSTEM_ROLE =   'system';
@@ -145,6 +157,40 @@ class Message
         return $this;
     }
 
+
+    public function getPromptTokens(): ?int
+    {
+        return $this->promptTokens;
+    }
+
+    public function setPromptTokens(?int $tokens): static
+    {
+        $this->promptTokens = $tokens;
+        return $this;
+    }
+
+    public function getCompletionTokens(): ?int
+    {
+        return $this->completionTokens;
+    }
+
+    public function setCompletionTokens(?int $tokens): static
+    {
+        $this->completionTokens = $tokens;
+        return $this;
+    }
+
+    public function getTotalTokens(): ?int
+    {
+        return $this->totalTokens;
+    }
+
+    public function setTotalTokens(?int $tokens): static
+    {
+        $this->totalTokens = $tokens;
+        return $this;
+    }
+
     public function getMetadata(): ?array
     {
         return $this->metadata;
@@ -153,6 +199,17 @@ class Message
     public function setMetadata(?array $metadata): static
     {
         $this->metadata = $metadata;
+        return $this;
+    }
+
+    public function getTokenDetails(): ?array
+    {
+        return $this->tokenDetails;
+    }
+
+    public function setTokenDetails(?array $tokenDetails): static
+    {
+        $this->tokenDetails = $tokenDetails;
         return $this;
     }
 

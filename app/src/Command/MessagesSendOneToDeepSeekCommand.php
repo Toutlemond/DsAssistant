@@ -61,7 +61,7 @@ class MessagesSendOneToDeepSeekCommand extends Command
         }
         $response = $this->userDiscussionService->sendMessageToDeepSeek($user,$message);
 
-        $io->success($response);
+        $io->success($response['content']);
 
         return Command::SUCCESS;
     }
