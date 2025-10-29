@@ -27,7 +27,7 @@ class DeepSeekService
             'prompt' => 'Ты - молодой перспективный рэпер. Общайся как творческий человек, используй современный сленг, но будь уважителен. Интересуйся музыкой, культурой, саморазвитием. Будь дружелюбным и поддерживай беседу. НЕ раскрывай что ты ИИ.'
         ],
         'friend' => [
-            'name' => 'Парень 18-19 лет',
+            'name' => 'Друг',
             'prompt' => 'Ты - молодой парень 18-19 лет. Общайся спокойно, уверено, используй современный сленг, но будь уважителен. Будь дружелюбным и поддерживай беседу. Но не будь навязчивым. Ты старший товарищ для подростка. НЕ раскрывай что ты ИИ.'
         ],
         'developer' => [
@@ -56,11 +56,12 @@ class DeepSeekService
 5. Задавай открытые вопросы о новых увлечениях";
 
     public function __construct(
-        HttpClientInterface $httpClient,
-        LoggerInterface $deepseekLogger,
+        HttpClientInterface         $httpClient,
+        LoggerInterface             $deepseekLogger,
         ConversationAnalysisService $conversationAnalysisService,
-        string $deepseekApiKey
-    ) {
+        string                      $deepseekApiKey
+    )
+    {
         $this->httpClient = $httpClient;
         $this->logger = $deepseekLogger;
         $this->apiKey = $deepseekApiKey;
@@ -145,28 +146,25 @@ class DeepSeekService
      */
     public function generateInitiativeMessage(
         string $secretRole,
-        array $userContext,
+        array  $userContext,
         string $context = '',
         string $lastMessageText = '',
-        array $conversationHistory
-    ): string {
-        $interests =$personality = '';
+        array  $conversationHistory
+    ): string
+    {
+        $interests = $personality = '';
         if (!empty($userContext['interests'])) {
             $interests = implode(', ', $userContext['interests']);
         }
         if (!empty($userContext['personality'])) {
             $personality = implode(', ', $userContext['personality']);
         }
+
         if (empty($context)) {
-            $context = 'Это новое сообщение вы давно(часы или дни) не общались. Как будето написал старому другу проведать его';
+            $context = 'Это новое сообщение, вы какое то время не общались. Как будто написал старому другу проведать его';
         }
 
-//        if (!empty($lastMessageText)) {
-//            $context = 'Вы не общались какое то время, но последнее предложение написал ты. И оно было такое:" ' . $lastMessageText . '". ';
-//            $context .= 'Можно напомнить про него, а можно начать с чего то другого, тебе решать но учитывай черты личности.';
-//        }
-
-
+        $changeTopicPrompt = '';
         // Проверяем нужна ли смена темы
         if ($this->conversationAnalysisService->detectTopicShift($lastMessageText, $conversationHistory)) {
             $recentTopics = $this->conversationAnalysisService->extractTopics(
@@ -177,7 +175,12 @@ class DeepSeekService
             $changeTopicPrompt = "\n\nВНИМАНИЕ: Пользователь хочет сменить тему. Плавно перейди на тему: {$freshTopic}";
         }
 
-        $prompt = $this->buildSystemPrompt($secretRole, $userContext,$changeTopicPrompt) . "\n\n" .
+        if (empty($context) && empty($changeTopicPrompt) && !empty($lastMessageText)) {
+            $context = 'Вы не общались какое то время, но последнее предложение написал ты. И оно было такое:" ' . $lastMessageText . '". ';
+            $context .= 'Можно напомнить про него, а можно начать с чего то другого, тебе решать, но учитывай черты личности.';
+        }
+
+        $prompt = $this->buildSystemPrompt($secretRole, $userContext, $changeTopicPrompt) . "\n\n" .
             "Контекст: $context\n" .
             "Интересы: $interests\n" .
             "Черты личности: $personality\n" .
@@ -229,6 +232,7 @@ class DeepSeekService
 //todo vb деньги списываем сами
         return $this->parseJsonResponse($response['content']);
     }
+
     /**
      * Метод запроса к LLM
      * @param array $messages
@@ -280,15 +284,17 @@ class DeepSeekService
 
         }
     }
+
     private function buildSystemPrompt(string $secretRole, array $userContext = [], $changeTopicPrompt = ''): string
     {
-        $basePrompt = self::ROLES[$secretRole]['prompt'] ?? self::ROLES['oldfriend']['prompt'] ;
+        $basePrompt = self::ROLES[$secretRole]['prompt'] ?? self::ROLES['oldfriend']['prompt'];
         // Добавляем контекст о пользователе
         if (!empty($userContext)) {
             $context = "Ты общаешься с {$userContext['first_name']}";
             if (isset($userContext['age'])) {
                 $context .= ", {$userContext['age']} лет";
-            } if (isset($userContext['gender'])) {
+            }
+            if (isset($userContext['gender'])) {
                 $context .= ", пол: {$userContext['gender']} ";
             }
             if (!empty($userContext['interests'])) {
@@ -299,7 +305,7 @@ class DeepSeekService
             }
             $basePrompt .= "\n\n $context.";
         }
-        if(!empty($changeTopicPrompt)) {
+        if (!empty($changeTopicPrompt)) {
             $basePrompt .= "\n\n" . $changeTopicPrompt;
         } else {
             $basePrompt .= "\n\n" . self::IMPORTANT_RULES;

@@ -62,11 +62,16 @@ class UserAnalyzeUserPersonalityCommand extends Command
             $messagesTexts[] = $message->getContent();
         }
 
+        if(empty($messagesTexts) || count($messagesTexts) <10 ) {
+            $io->error('Анализ провести невозможно. Мало сообщений');
+            return Command::SUCCESS;
+        }
+
         // После анализа от DeepSeek
         $analysis = $this->deepSeekService->analyzeUserPersonality($messagesTexts, $user->getUserContext());
 
         if (!empty($analysis['interests'])) {
-            $user->setInterests($analysis['interests']);
+            $user->addInterest($analysis['interests']);
         }
         if (!empty($analysis['personality_traits'])) {
             $user->setPersonalityTraits($analysis['personality_traits']);

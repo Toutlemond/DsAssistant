@@ -14,9 +14,14 @@ class UserRegistrationService
     public CONST WAIT_FIRST_NAME_STATE = 'awaiting_first_name';
     public CONST WAIT_GENDER_STATE =    'awaiting_gender';
     public CONST WAIT_AGE_STATE = 'awaiting_age';
+    public CONST WAIT_INTERESTS = 'awaiting_interests';
     public CONST WAIT_MY_ROLE_STATE = 'awaiting_my_role';
     public CONST COMPLETE_STATE = 'completed';
 
+    private const GENDERS = [
+        [['text' => '🙋‍♂️ Мужской']],
+        [['text' => '🙋‍♀️ Женский']]
+    ];
 
     public function __construct(
         EntityManagerInterface $entityManager,
@@ -71,6 +76,9 @@ class UserRegistrationService
             case self::WAIT_AGE_STATE:
                 $this->processAge($user, $text);
                 break;
+            case self::WAIT_INTERESTS:
+                $this->processInterests($user, $text);
+                break;
 //            case 'awaiting_phone':
 //                $this->processPhone($user, $text);
 //                break;
@@ -94,11 +102,7 @@ class UserRegistrationService
         $user->setState(self::WAIT_GENDER_STATE);
         $this->userRepository->save($user);
 
-        $keyboard = $this->telegramBotService->createReplyKeyboard([
-            [['text' => '🙋‍♂️ Мужской']],
-            [['text' => '🙋‍♀️ Женский']],
-            [['text' => '❓ Другое']]
-        ]);
+        $keyboard = $this->telegramBotService->createReplyKeyboard(self::GENDERS);
 
         $this->telegramBotService->sendMessage(
             $user->getChatId(),
@@ -111,11 +115,21 @@ class UserRegistrationService
     {
         $genderMap = [
             '🙋‍♂️ Мужской' => 'male',
-            '🙋‍♀️ Женский' => 'female',
-            '❓ Другое' => 'other'
+            '🙋‍♀️ Женский' => 'female'
         ];
 
-        $user->setGender($genderMap[$gender] ?? 'other');
+        if(empty($genderMap[$gender])){
+            $keyboard = $this->telegramBotService->createReplyKeyboard(self::GENDERS);
+
+            $this->telegramBotService->sendMessage(
+                $user->getChatId(),
+                "Возникла ошибка! Укажи свой пол?",
+                $keyboard
+            );
+            return;
+        }
+
+        $user->setGender($genderMap[$gender]);
         $user->setState(self::WAIT_AGE_STATE);
         $this->userRepository->save($user);
 
@@ -139,13 +153,41 @@ class UserRegistrationService
         }
 
         $user->setAge($age);
+        $user->setState(self::WAIT_INTERESTS);
+        $this->userRepository->save($user);
+
+        $this->telegramBotService->sendMessage(
+            $user->getChatId(),
+            "Хорошо! А теперь перечисли то, что тебе интересно - просто несколько слов через запятую или пробел",
+            ['remove_keyboard' => true]
+        );
+    }
+
+    private function processInterests(User $user, string $interestsText): void
+    {
+        $interestsText = trim($interestsText);
+        $interestsText = strip_tags($interestsText);
+        $interestsText = str_replace(',', ' ', $interestsText);
+        $interestsText = str_replace('-', ' ', $interestsText);
+        $interestsText = str_replace('  ', ' ', $interestsText); // да это жесть но мне лень в регулярки
+        $interests = explode(' ', $interestsText);
+
+        if(count($interests) > 10){
+            $this->telegramBotService->sendMessage(
+                $user->getChatId(),
+                "Пожалуйста, введи свои интересы,а не Войну и Мир:"
+            );
+            return;
+        }
+
+        $user->setInterests($interests);
         $user->setState(self::COMPLETE_STATE);
         $this->userRepository->save($user);
 
         $this->sendWelcomeMessage($user);
         //todo vb Разобраться с меню
 
-        //$this->sendMainMenu($user->getChatId());
+        $this->sendMainMenu($user->getChatId());
     }
 
     private function sendWelcomeMessage(User $user): void
@@ -156,11 +198,13 @@ class UserRegistrationService
             'other' => 'другой'
         ];
 
+        $interests = implode(',', $user->getInterests());
         $message = "🎉 <b>Регистрация завершена!</b>\n\n";
         $message .= "📋 Твои данные:\n";
         $message .= "• Имя: <b>{$user->getFirstName()}</b>\n";
         $message .= "• Пол: <b>{$genderText[$user->getGender()]}</b>\n";
-        $message .= "• Возраст: <b>{$user->getAge()}</b>\n\n";
+        $message .= "• Возраст: <b>{$user->getAge()}</b>\n";
+        $message .= "• Интересы: <b>{$interests}</b>\n\n";
         $message .= "Теперь мы можем общаться! Напиши мне что-нибудь 😊";
 
         $this->telegramBotService->sendMessage($user->getChatId(), $message);
@@ -170,10 +214,10 @@ class UserRegistrationService
     {
         $keyboard = $this->telegramBotService->createReplyKeyboard([
             [
-                ['text' => '📝 Профиль','callback_data'=>'profile'],
-                ['text' => '⚙️ Настройки','callback_data'=>'settings']
+                ['text' => 'Профиль'],
+                ['text' => 'Настройки']
             ],
-            [['text' => '❓ Помощь','callback_data'=>'help']]
+            [['text' => 'Помощь']]
         ]);
 
         $this->telegramBotService->sendMessage(

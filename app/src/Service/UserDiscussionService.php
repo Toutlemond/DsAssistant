@@ -19,6 +19,8 @@ class UserDiscussionService
     private MessageRepository $messageRepository;
     private MessageService $messageService;
 
+    private const MAX_TOKEN_ALERT = 100000;
+
     public function __construct(
         DeepSeekService $deepSeekService,
         TelegramBotService $telegramBotService,
@@ -43,8 +45,15 @@ class UserDiscussionService
         $chatId = $message['chat']['id'];
         $text = $message['text'] ?? '';
         $user = $this->userRepository->findByChatId($chatId);
-        $this->logger->error('User:' . $user->getUsername() );
+        $this->logger->error('User:' . $user->getUsername());
         if (!empty($user)) {
+            if ($user->getTotalTokensUsed() > self::MAX_TOKEN_ALERT) {
+                $this->telegramBotService->sendMessage(
+                    $chatId,
+                    'Внимание!!! Достигнуто максимальное количество сообщений для бесплатного аккаунта. Переходите на премиум'
+                );
+                return;
+            }
             $newMessage = $this->saveMessage($text, $user, Message::USER_ROLE, 'text', $chatId);
             $answer = $this->sendMessageToDeepSeek($user, $newMessage);
         }
