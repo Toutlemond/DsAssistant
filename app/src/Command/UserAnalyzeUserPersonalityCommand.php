@@ -2,6 +2,8 @@
 
 namespace App\Command;
 
+use App\Entity\Message;
+use App\Repository\MessageRepository;
 use App\Repository\UserRepository;
 use App\Service\DeepSeekService;
 use App\Service\UserDiscussionService;
@@ -24,14 +26,17 @@ class UserAnalyzeUserPersonalityCommand extends Command
     private UserDiscussionService $userDiscussionService;
     private DeepSeekService $deepSeekService;
     private EntityManagerInterface $entityManager;
+    private MessageRepository $messageRepository;
 
     public function __construct(
         UserRepository $userRepository,
+        MessageRepository $messageRepository,
         UserDiscussionService $userDiscussionService,
         DeepSeekService $deepSeekService,
         EntityManagerInterface $entityManager
 ) {
         $this->userRepository = $userRepository;
+        $this->messageRepository = $messageRepository;
         $this->userDiscussionService = $userDiscussionService;
         $this->deepSeekService = $deepSeekService;
         $this->entityManager = $entityManager;
@@ -55,7 +60,8 @@ class UserAnalyzeUserPersonalityCommand extends Command
             $io->error('User not found');
             return Command::FAILURE;
         }
-        $messages = $user->getMessages();
+
+        $messages = $this->messageRepository->findUnanalyzedUserMessages($user,100);
 
         $messagesTexts = [];
         foreach ($messages as $message) {
@@ -71,12 +77,19 @@ class UserAnalyzeUserPersonalityCommand extends Command
         $analysis = $this->deepSeekService->analyzeUserPersonality($messagesTexts, $user->getUserContext());
 
         if (!empty($analysis['interests'])) {
-            $user->addInterest($analysis['interests']);
+            foreach ($analysis['interests'] as $interest) {
+                $user->addInterest($interest);
+            }
         }
         if (!empty($analysis['personality_traits'])) {
             $user->setPersonalityTraits($analysis['personality_traits']);
         }
         $user->setLastAnalysisAt(new \DateTimeImmutable());
+
+        /** @var Message $message */
+        foreach ($messages as $message) {
+            $message->setUsedForAnalysis(true);
+        }
 
         $this->entityManager->flush();
 

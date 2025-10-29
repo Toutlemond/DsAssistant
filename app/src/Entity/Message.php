@@ -52,6 +52,10 @@ class Message
     #[ORM\Column(nullable: true)]
     private ?bool $usedForAnalysis = false;
 
+    // Для анализа задач и событий
+    #[ORM\Column(nullable: true)]
+    private ?bool $usedForTasks = false;
+
     #[ORM\Column(nullable: true)]
     private ?bool $processed = null;
 
@@ -267,6 +271,20 @@ class Message
         $this->usedForAnalysis = $usedForAnalysis;
         return $this;
     }
+
+    public function isUsedForTasks(): ?bool
+    {
+        return $this->usedForTasks;
+    }
+
+    public function setUsedForTasks(?bool $usedForTasks): static
+    {
+        $this->usedForTasks = $usedForTasks;
+        return $this;
+    }
+
+
+
 
     public function isProcessed(): ?bool
     {

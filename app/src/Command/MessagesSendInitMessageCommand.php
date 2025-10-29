@@ -41,7 +41,7 @@ class MessagesSendInitMessageCommand extends Command
         $io = new SymfonyStyle($input, $output);
         $userId = $input->getArgument('userId');
         $context = $input->getArgument('context');
-        if(empty($context)){
+        if (empty($context)) {
             $context = '';
         }
 
@@ -53,7 +53,8 @@ class MessagesSendInitMessageCommand extends Command
 
         $response = $this->userDiscussionService->sendSendInitialMessage($user, $context);
 
-        $io->success('Init message to user ' .$user->getId() .  '-' . $user->getUsername() . ' sent');
+        $io->success('Init message to user ' . $user->getId() . '-' . $user->getUsername() . ' sent');
+        $io->info('Init message:' . $response);
 
         return Command::SUCCESS;
     }
