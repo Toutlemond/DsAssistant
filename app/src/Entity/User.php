@@ -28,6 +28,9 @@ class User
     private ?string $lastName = null;
 
     #[ORM\Column(length: 255, nullable: true)]
+    private ?string $middleName = null;
+
+    #[ORM\Column(length: 255, nullable: true)]
     private ?string $gender = null;
 
     #[ORM\Column(nullable: true)]
@@ -100,6 +103,7 @@ class User
     {
        return [
             'first_name' => $this->getFirstName(),
+            'middle_name' => $this->getMiddleName(),
             'age' => $this->getAge(),
             'gender' => $this->getGender(),
             'interests' => $this->getInterests(),
@@ -177,6 +181,18 @@ class User
     public function setLastName(?string $lastName): static
     {
         $this->lastName = $lastName;
+
+        return $this;
+    }
+
+    public function getMiddleName(): ?string
+    {
+        return $this->middleName;
+    }
+
+    public function setMiddleName(?string $middleName): static
+    {
+        $this->middleName = $middleName;
 
         return $this;
     }

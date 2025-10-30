@@ -23,6 +23,9 @@ class Message
     #[ORM\Column(length: 20)]
     private ?string $role = null; // 'user', 'assistant', 'system'
 
+    #[ORM\Column(length: 20)]
+    private ?string $assistantRole = null; // В какой роли был ассистент при этой беседе
+
     #[ORM\Column(length: 50, nullable: true)]
     private ?string $messageType = null; // 'text', 'initiative', 'command', 'analysis'
 
@@ -125,6 +128,17 @@ class Message
     public function setRole(string $role): static
     {
         $this->role = $role;
+        return $this;
+    }
+
+    public function getAssistantRole(): ?string
+    {
+        return $this->assistantRole;
+    }
+
+    public function setAssistantRole(string $assistantRole): static
+    {
+        $this->assistantRole = $assistantRole;
         return $this;
     }
 

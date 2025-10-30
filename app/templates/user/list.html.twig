@@ -1,0 +1,84 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Пользователи бота{% endblock %}
+
+{% block body %}
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3">👥 Пользователи бота</h1>
+                <span class="badge bg-primary fs-6">Всего: {{ users|length }}</span>
+            </div>
+
+            <div class="card">
+                <div class="card-header bg-white">
+                    <h5 class="card-title mb-0">Список зарегистрированных пользователей</h5>
+                </div>
+                <div class="card-body">
+                    {% if users is empty %}
+                        <div class="text-center py-4">
+                            <div class="text-muted">😴 Пользователей пока нет</div>
+                        </div>
+                    {% else %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Пользователь</th>
+                                    <th>Chat ID</th>
+                                    <th>Статус</th>
+                                    <th>Сообщений</th>
+                                    <th>Действия</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {% for user in users %}
+                                    <tr>
+                                        <td><strong>#{{ user.id }}</strong></td>
+                                        <td>
+                                            <div>
+                                                <strong>{{ user.firstName }}</strong>
+                                                {% if user.lastName %}
+                                                    {{ user.lastName }}
+                                                {% endif %}
+                                            </div>
+                                            {% if user.username %}
+                                                <small class="text-muted">@{{ user.username }}</small>
+                                            {% endif %}
+                                            <div>
+                                                <small class="text-muted">
+                                                    {{ user.age }} лет,
+                                                    {% if user.gender == 'male' %}♂️ муж.
+                                                    {% elseif user.gender == 'female' %}♀️ жен.
+                                                    {% else %}❓ друг.
+                                                    {% endif %}
+                                                </small>
+                                            </div>
+                                        </td>
+                                        <td><code class="text-primary">{{ user.chatId }}</code></td>
+                                        <td>
+                                        <span class="badge bg-{{ user.state == 'completed' ? 'success' : 'warning' }}">
+                                            {{ user.state }}
+                                        </span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-info">{{ user.messages|length }}</span>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm">
+                                                <button class="btn btn-outline-primary">👁️</button>
+                                                <button class="btn btn-outline-secondary">✉️</button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

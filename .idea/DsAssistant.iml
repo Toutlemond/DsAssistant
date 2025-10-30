@@ -143,8 +143,12 @@
       <excludeFolder url="file://$MODULE_DIR$/app/vendor/psr/http-factory" />
       <excludeFolder url="file://$MODULE_DIR$/app/vendor/psr/http-message" />
       <excludeFolder url="file://$MODULE_DIR$/app/vendor/ralouphie/getallheaders" />
+      <excludeFolder url="file://$MODULE_DIR$/app/vendor/symfony/webpack-encore-bundle" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="library" name="color-modes" level="application" />
+    <orderEntry type="library" name="bootstrap.bundle" level="application" />
+    <orderEntry type="library" name="chart.js" level="application" />
   </component>
 </module>

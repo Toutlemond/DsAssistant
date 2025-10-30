@@ -74,6 +74,9 @@ class BotMenuService
             case 'action:setrole:psychologist':
                 $responseText = $this->setRole($chatId,'psychologist');
                 break;
+             case 'action:setrole:trickster':
+                $responseText = $this->setRole($chatId,'trickster');
+                break;
             default:
                 $responseText = "❌ Неизвестная команда";
         }
@@ -147,7 +150,6 @@ class BotMenuService
             $roleName = [];
             $roleName['name'] = 'Друг';
         }
-
 
         $keyboardArray =[];
 

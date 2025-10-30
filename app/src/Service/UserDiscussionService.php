@@ -54,6 +54,14 @@ class UserDiscussionService
                 );
                 return;
             }
+            $pause = false;
+            if ($pause) {
+                $this->telegramBotService->sendMessage(
+                    $chatId,
+                    'Сервис временно отключен! Попробуйте через несколько минут. Спасибо!'
+                );
+                return;
+            }
             $newMessage = $this->saveMessage($text, $user, Message::USER_ROLE, 'text', $chatId);
             $answer = $this->sendMessageToDeepSeek($user, $newMessage);
         }
@@ -75,9 +83,6 @@ class UserDiscussionService
     public function sendMessageToDeepSeek(User $user,Message $message): array
     {
         $conversationHistory = $this->messageService->getDeepSeekFormatHistory($user);
-
-        // todo vb тут нужно менять контекст если почуяли недладное
-
         // Основное общение
         $response = $this->deepSeekService->sendChatMessage(
             $message,
@@ -85,7 +90,6 @@ class UserDiscussionService
             $user->getAiRole() ?? 'friend',
             $user->getUserContext()
         );
-        //todo VB допиши тут использование токенов
 
         // Обновляем статистику пользователя
         if ($response['usage']) {
@@ -105,6 +109,10 @@ class UserDiscussionService
         $userContext = $user->getUserContext();
         $role =  $user->getAiRole() ?? 'friend';
         $lastMessage = $user->getLastMessage();
+
+        if ($lastMessage->getCreatedAt() > date_create_immutable('now -30 minute')) {
+            return 'еще рано';
+        }
 
         if (!empty($lastMessage) && $lastMessage->getRole() === Message::ASSISTANT_ROLE){
             $lastMessageText = $lastMessage->getContent();
@@ -140,6 +148,7 @@ class UserDiscussionService
         $newMessage->setUser($user);
         $newMessage->setContent($messageText);
         $newMessage->setRole($role);
+        $newMessage->setAssistantRole($user->getAiRole());
         $newMessage->setMessageType($type);
         $newMessage->setTelegramMessageId($chatId);
         $newMessage->setCreatedAt(date_create_immutable());

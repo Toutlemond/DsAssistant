@@ -1,0 +1,27 @@
+{
+  "name": "html",
+  "version": "1.0.0",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+      "dev": "npx tailwindcss -i ./assets/styles/app.scss -o ./public/build/app.css --watch",
+      "build": "npx tailwindcss -i ./assets/styles/app.scss -o ./public/build/app.css --minify"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@popperjs/core": "^2.11.8",
+    "bootstrap": "^5.3.8"
+  },
+  "devDependencies": {
+    "@symfony/webpack-encore": "^5.2.0",
+    "autoprefixer": "^10.4.21",
+    "postcss-loader": "^7.3.4",
+    "sass": "^1.93.2",
+    "sass-loader": "^16.0.6"
+  },
+  "description": ""
+}

@@ -11,7 +11,16 @@ final class AdminWebController extends AbstractController
     #[Route('/admin', name: 'app_admin')]
     public function index(): Response
     {
-        $aaaa= 1;
+        $aaaa = 1;
+        return $this->render('admin_web/index.html.twig', [
+            'controller_name' => 'AdminWebController',
+        ]);
+    }
+
+    #[Route('/admin', name: 'app_users')]
+    public function users(): Response
+    {
+        $aaaa = 1;
         return $this->render('admin_web/index.html.twig', [
             'controller_name' => 'AdminWebController',
         ]);
