@@ -86,6 +86,10 @@ class User
         // ... остальной код конструктора
     }
 
+    public function setId($id): void{
+        $this->id = $id;
+    }
+
     /**
      * @return Collection<int, Message>
      */
