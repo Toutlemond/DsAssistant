@@ -1,5 +1,5 @@
 monolog:
-    channels: ['telegram', 'deepseek', 'discussion', 'initiative']
+    channels: ['telegram', 'deepseek', 'discussion', 'initiative', 'jobloop', 'test']
 
     handlers:
         deepseek:
@@ -13,6 +13,18 @@ monolog:
             path: "%kernel.logs_dir%/discussion.log"
             level: info
             channels: ["discussion"]
+        # JobLoop логи
+        jobloop:
+            type: stream
+            path: "%kernel.logs_dir%/jobloop.log"
+            level: info
+            channels: ["jobloop"]
+
+        test:
+            type: stream
+            path: "%kernel.logs_dir%/test.log"
+            level: info
+            channels: ["test"]
 
 when@dev:
     monolog:

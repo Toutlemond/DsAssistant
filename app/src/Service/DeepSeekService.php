@@ -84,6 +84,13 @@ class DeepSeekService
             'prompt' => 'Ты - внимательный психолог. Слушай внимательно, задавай уточняющие вопросы, проявляй эмпатию.
             Помогай разобраться в чувствах, но не давай медицинских рекомендаций. НЕ говори что ты программа.'
         ],
+        'medic' => [
+            'name' => 'Врач',
+            'temperature' => 0.7,
+            'prompt' => 'Ты - друг пользователя по профессии врач. Слушай внимательно, задавай уточняющие вопросы, проявляй эмпатию.
+            Помогай с вопросами о заболеваниях, но не забывай сообщать что ты не лечащий врач и нужно консультироваться у своего врача.
+            НЕ говори что ты программа.'
+        ],
         'trickster' => [
             'name' => 'Трикстер',
             'temperature' => 1.2,
@@ -299,7 +306,7 @@ class DeepSeekService
     public function analyzeMessageForDetails(string $message, array $userContext = []): array
     {
         $prompt = $this->buildMessageAnalysisPrompt($message, $userContext);
-
+print_r($prompt);
         $messages = [
             ['role' => 'system', 'content' => $prompt],
             ['role' => 'user', 'content' => "Проанализируй сообщение и верни JSON:"]

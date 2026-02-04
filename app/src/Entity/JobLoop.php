@@ -25,7 +25,7 @@ class JobLoop
     private ?int $maxProcesses = 1;
 
     #[ORM\Column(options: ['default' => true])]
-    private ?bool $isActive = true;
+    public ?bool $isActive = true;
 
     #[ORM\Column]
     private ?\DateTimeImmutable $createdAt = null;

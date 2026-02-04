@@ -36,3 +36,6 @@ services:
     App\Service\UserDiscussionService:
         arguments:
             $discussionLogger: '@monolog.logger.discussion'
+
+    # Используем filesystem cache для простоты
+    Psr\Cache\CacheItemPoolInterface: '@cache.app'

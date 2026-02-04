@@ -4,3 +4,5 @@
 /symfony/var/log/xdebug.log
 /app/.env.dev
 /app/.env.local
+/symfony/var/log/jobloop.log
+/symfony/var/log/test.log

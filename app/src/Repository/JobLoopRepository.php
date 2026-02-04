@@ -20,7 +20,13 @@ class JobLoopRepository extends ServiceEntityRepository
             ->getQuery()
             ->getResult();
     }
-
+    public function findAll(): array
+    {
+        return $this->createQueryBuilder('j')
+            ->orderBy('j.command', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
     public function findLoopByCommand(string $command): ?JobLoop
     {
         return $this->findOneBy(['command' => $command, 'isActive' => true]);
