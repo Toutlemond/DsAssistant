@@ -51,9 +51,9 @@ class MessageService
     /**
      * Получить историю диалога в формате для DeepSeek API
      */
-    public function getDeepSeekFormatHistory(User $user, int $limit = 10): array
+    public function getDeepSeekFormatHistory(User $user, string $aiRole, int $limit = 10): array
     {
-        $messages = $this->messageRepository->findConversationHistory($user, $limit);
+        $messages = $this->messageRepository->findConversationHistory($user, $aiRole, $limit);
 
         return array_map(function (Message $message) {
             return [

@@ -9,7 +9,7 @@ use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 
-class UserDiscussionService
+abstract class AbstractDiscussionService
 {
     private TelegramBotService $telegramBotService;
     private UserRepository $userRepository;
@@ -63,7 +63,7 @@ class UserDiscussionService
                 return;
             }
             $newMessage = $this->saveMessage($text, $user, Message::USER_ROLE, 'text', $chatId);
-            $answer = $this->sendMessageToDeepSeek($user, $newMessage, $user->getAiRole());
+            $answer = $this->sendMessageToDeepSeek($user, $newMessage);
         }
         if (!empty($answer) && !empty($answer['content']) && is_string($answer['content'])) {
             $this->saveMessage(
@@ -80,59 +80,8 @@ class UserDiscussionService
         }
     }
 
-    public function sendMessageToDeepSeek(User $user,Message $message, string $aiRole = 'friend'): array
-    {
-        $conversationHistory = $this->messageService->getDeepSeekFormatHistory($user, $aiRole);
-        // Основное общение
-        $response = $this->deepSeekService->sendChatMessage(
-            $message,
-            $conversationHistory,
-            $aiRole,
-            $user->getUserContext()
-        );
+    public abstract function sendMessageToDeepSeek(User $user,Message $message): array;
 
-        // Обновляем статистику пользователя
-        if ($response['usage']) {
-            $user->addTokenUsage(
-                $response['usage']['prompt_tokens'],
-                $response['usage']['completion_tokens']
-            );
-        }
-
-        $this->entityManager->flush();
-
-        return $response;
-    }
-
-    public function sendSendInitialMessage(User $user, $talkContext = ''): string
-    {
-        $userContext = $user->getUserContext();
-        $role =  $user->getAiRole() ?? 'friend';
-        $lastMessage = $user->getLastMessage();
-
-        if ($lastMessage->getCreatedAt() > date_create_immutable('now -30 minute')) {
-            return 'еще рано';
-        }
-
-        if (!empty($lastMessage) && $lastMessage->getRole() === Message::ASSISTANT_ROLE){
-            $lastMessageText = $lastMessage->getContent();
-        }
-        $conversationHistory = $this->messageService->getDeepSeekFormatHistory($user, $role);
-
-        $initMessage =  $this->deepSeekService->generateInitiativeMessage(
-            $role,
-            $userContext,
-            $talkContext,
-            $lastMessageText ?? '',
-            $conversationHistory
-        );
-        $chatId = $user->getChatId();
-        if(!empty($initMessage && is_string($initMessage))) {
-            $this->saveMessage($initMessage, $user, Message::ASSISTANT_ROLE, 'text', $chatId, true, true);
-            $this->telegramBotService->sendMessage($chatId, $initMessage);
-        }
-        return $initMessage;
-    }
 
     public function saveMessage(
         string $messageText,

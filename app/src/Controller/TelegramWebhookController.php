@@ -95,6 +95,40 @@ final class TelegramWebhookController extends AbstractController
         }
     }
 
+
+    #[Route('/webhook/taro', name: 'telegram_taro_webhook', methods: ['POST','GET'])]
+    public function handleTaro(Request $request): Response
+    {
+        try {
+            $content = json_decode($request->getContent(), true);
+            $this->logger->info('Telegram webhook received', ['content' => $content]);
+
+            // Обрабатываем текстовые сообщения
+            if (isset($content['message']['text'])) {
+                $message = $content['message'];
+                $chatId = $message['chat']['id'];
+                $text = $message['text'];
+
+                $user = $this->userRepository->findByChatId($chatId);
+                if (empty($user) || $user->getState() !== UserRegistrationService::COMPLETE_STATE) {
+                    $this->userRegistrationService->handleMessage($content['message'], true);
+                } else {
+                  // тут напиши Таро Сервис
+                }
+            }
+
+            return new Response('OK');
+
+        } catch (\Exception $e) {
+            $this->logger->error('Webhook error', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return new Response('ERROR', 500);
+        }
+    }
+
     #[Route('/webhook/telegram/setup', name: 'telegram_webhook_setup', methods: ['GET'])]
     public function setupWebhook(): Response
     {

@@ -80,6 +80,9 @@ class User
 
     #[ORM\Column(type: 'json', nullable: true)]
     private ?array $tokenUsageStats = null;
+
+    #[ORM\Column]
+    private bool $its_a_bot = false;
     public function __construct()
     {
         $this->messages = new ArrayCollection();
@@ -379,6 +382,18 @@ class User
         $stats['daily_usage'][$today] = ($stats['daily_usage'][$today] ?? 0) + ($promptTokens + $completionTokens);
 
         $this->tokenUsageStats = $stats;
+
+        return $this;
+    }
+
+    public function isItsABot(): ?bool
+    {
+        return $this->its_a_bot;
+    }
+
+    public function setItsABot(bool $its_a_bot): static
+    {
+        $this->its_a_bot = $its_a_bot;
 
         return $this;
     }

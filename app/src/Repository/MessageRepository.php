@@ -20,7 +20,7 @@ class MessageRepository extends ServiceEntityRepository
     /**
      * Получить историю диалога для пользователя (последние N сообщений)
      */
-    public function findConversationHistory(User $user, int $limit = 10): array
+    public function findConversationHistory(User $user, string $aiRole, int $limit = 10): array
     {
         $rows = $this->createQueryBuilder('m')
             ->where('m.user = :user')
@@ -28,7 +28,7 @@ class MessageRepository extends ServiceEntityRepository
             ->andWhere('m.assistantRole = :arole')
             ->setParameter('user', $user)
             ->setParameter('roles', ['user', 'assistant'])
-            ->setParameter('arole', $user->getAiRole())
+            ->setParameter('arole', $aiRole)
             ->orderBy('m.id', 'DESC')
             ->setMaxResults($limit)
             ->getQuery()
