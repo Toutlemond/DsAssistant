@@ -1,0 +1,44 @@
+{# templates/admin_web/users.html.twig #}
+{% extends 'base.html.twig' %}
+
+{% block title %}Messages Management{% endblock %}
+
+{% block body %}
+    <h2>
+        {% if user %}
+            Переписка с пользователем {{ user.getUsername() }}
+        {% else %}
+            Все сообщения
+        {% endif %}
+    </h2>
+    {% if user %}
+        <a href="{{ path('admin_messages') }}">← К списку всех сообщений</a>
+    {% endif %}
+    <table class="table table-striped">
+        <thead>
+        <tr>
+            <th>id</th>
+            <th>User</th>
+            <th>Role</th>
+            <th>Content</th>
+
+            <th>Created_at</th>
+            <th>AssistentRole</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for message in messages %}
+            <tr>
+                <td>{{ message.id }}</td>
+
+                <td> <a href="{{ path('admin_user_messages', {userId: message.user.getId()}) }}">{{ message.user.getUsername() }}</a> </td>
+                <td>{{ message.role }}</td>
+                <td>{{ message.getContent() }}</td>
+                <td>{{ message.getCreatedAt()|date("Y-m-d H:i:s") }}</td>
+                <td>{{ message.getAssistantRole() }}</td>
+            </tr>
+        {% endfor %}
+
+        </tbody>
+    </table>
+{% endblock %}
