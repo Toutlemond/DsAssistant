@@ -10,7 +10,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\HasLifecycleCallbacks]
 class Focus
 {
-    public const STATUS_PENDING = 'pending';
+    public const STATUS_PENDING = 'new';
     public const STATUS_PROCESSING = 'processing';
     public const STATUS_DONE = 'done';
     public const STATUS_CANCELLED = 'cancelled';

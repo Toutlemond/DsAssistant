@@ -54,16 +54,19 @@ class InternalThinkingService
         $prompt = $this->buildPrompt($focus);
 
         // Получаем ответ от DeepSeek (используем существующий сервис)
-        $response = $this->deepSeekService->sendMessage(
-            messages: [['role' => 'user', 'content' => $prompt]],
-            temperature: 0.7,
-        // Можно передать другие параметры
-        );
+
+        $messages = [
+            ['role' => 'user', 'content' => $prompt]
+        ];
+
+        $response = $this->deepSeekService->makeApiRequest($messages, 0.7); // Низкая температура для точности
+
 
         // Создаём мысль
         $thought = new Thought();
         $thought->setUser($focus->getUser());
         $thought->setFocus($focus);
+        $thought->setPrompt($prompt);
         $thought->setContent($response['content'] ?? '');
         $thought->setType($this->determineType($response['content'] ?? ''));
 

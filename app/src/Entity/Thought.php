@@ -3,6 +3,7 @@
 namespace App\Entity;
 
 use App\Repository\ThoughtRepository;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: ThoughtRepository::class)]
@@ -45,6 +46,9 @@ class Thought
     #[ORM\Column]
     private ?\DateTimeImmutable $createdAt = null;
 
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $prompt = null;
+
     public function __construct()
     {
         $this->createdAt = new \DateTimeImmutable();
@@ -64,4 +68,16 @@ class Thought
     public function getUsedAt(): ?\DateTimeImmutable { return $this->usedAt; }
     public function setUsedAt(?\DateTimeImmutable $usedAt): static { $this->usedAt = $usedAt; return $this; }
     public function getCreatedAt(): ?\DateTimeImmutable { return $this->createdAt; }
+
+    public function getPrompt(): ?string
+    {
+        return $this->prompt;
+    }
+
+    public function setPrompt(?string $prompt): static
+    {
+        $this->prompt = $prompt;
+
+        return $this;
+    }
 }

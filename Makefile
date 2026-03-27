@@ -46,3 +46,6 @@ route:
 
 bash:
 	docker exec -it ds_php bash
+
+lms-start:
+	lms server start --bind 0.0.0.0 --port 1234
