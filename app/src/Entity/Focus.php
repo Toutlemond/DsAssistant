@@ -10,7 +10,8 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\HasLifecycleCallbacks]
 class Focus
 {
-    public const STATUS_PENDING = 'new';
+    public const STATUS_NEW = 'new';
+    public const STATUS_PENDING = 'pending';
     public const STATUS_PROCESSING = 'processing';
     public const STATUS_DONE = 'done';
     public const STATUS_CANCELLED = 'cancelled';
@@ -38,8 +39,8 @@ class Focus
     private ?int $priority = 5;
 
     // Статус: pending, processing, done, cancelled
-    #[ORM\Column(length: 20, options: ['default' => self::STATUS_PENDING])]
-    private ?string $status = self::STATUS_PENDING;
+    #[ORM\Column(length: 20, options: ['default' => self::STATUS_NEW])]
+    private ?string $status = self::STATUS_NEW;
 
     // Дополнительные данные в JSON (например, исходный контекст)
     #[ORM\Column(type: 'json', nullable: true)]

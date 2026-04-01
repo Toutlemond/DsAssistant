@@ -6,6 +6,7 @@ use App\Entity\User;
 use App\Entity\PersonalData;
 use App\Entity\PastEventsTask;
 use App\Entity\MessageSendTask;
+use App\Repository\MessageRepository;
 use App\Repository\PersonalDataRepository;
 use App\Repository\PastEventsTaskRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -16,7 +17,8 @@ class PersonalDataService
         private PersonalDataRepository $personalDataRepository,
         private PastEventsTaskRepository $pastEventsTaskRepository,
         private MessageTaskService $messageTaskService,
-        private EntityManagerInterface $entityManager
+        private EntityManagerInterface $entityManager,
+        private  MessageRepository $messageRepository,
     ) {}
 
     public function processAnalysisResult(User $user, array $analysisResult): void
@@ -203,4 +205,52 @@ print_r($val);
 
         return $messages[array_rand($messages)];
     }
+
+    public function getUserContext(User $user, int $limitMessages = 10): string
+    {
+        $context = "Пользователь: {$user->getFirstName()}, {$user->getAge()} лет\n";
+
+        // Личные данные (из personal_data)
+        $personalData = $this->personalDataRepository->findByUser($user);
+        $people = [];
+        $pets = [];
+        $locations = [];
+        $preferences = [];
+        foreach ($personalData as $data) {
+            if ($data->getType() === 'person') {
+                $people[] = $data->getDataKey();
+            } elseif ($data->getType() === 'pet') {
+                $pets[] = $data->getDataKey();
+            } elseif ($data->getType() === 'location') {
+                $locations[] = $data->getDataKey();
+            } elseif ($data->getType() === 'preference') {
+                $preferences[] = $data->getDataKey();
+            }
+        }
+        if (!empty($people)) $context .= "Близкие люди: " . implode(', ', $people) . "\n";
+        if (!empty($pets)) $context .= "Питомцы: " . implode(', ', $pets) . "\n";
+        if (!empty($locations)) $context .= "Места: " . implode(', ', $locations) . "\n";
+        if (!empty($preferences)) $context .= "Предпочтения: " . implode(', ', $preferences) . "\n";
+
+        // Последние сообщения
+        $messages = $this->messageRepository->findRecentUserMessages($user->getId(), $limitMessages);
+        if (!empty($messages)) {
+            $context .= "\nНедавние сообщения пользователя:\n";
+            foreach ($messages as $msg) {
+                $context .= "- " . $msg->getContent() . "\n";
+            }
+        }
+
+        // Предыдущие мысли агента о пользователе
+        $thoughts = $this->messageRepository->findRecentByUser($user, 5);
+        if (!empty($thoughts)) {
+            $context .= "\nМои предыдущие мысли о нём:\n";
+            foreach ($thoughts as $thought) {
+                $context .= "- " . $thought->getContent() . "\n";
+            }
+        }
+
+        return $context;
+    }
+
 }

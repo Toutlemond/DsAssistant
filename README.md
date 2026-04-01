@@ -16,3 +16,6 @@ make bash
 php bin/console app:set-web-hook
 
 Хук зареган и должно работать 
+
+# ДЖОБЫ
+Для работы циклов запустить make worker

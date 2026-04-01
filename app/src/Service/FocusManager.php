@@ -32,7 +32,7 @@ class FocusManager
         $focus->setUser($user);
         $focus->setPriority($priority);
         $focus->setContext($context);
-        $focus->setStatus(Focus::STATUS_PENDING);
+        $focus->setStatus(Focus::STATUS_NEW);
 
         $this->focusRepository->save($focus);
 

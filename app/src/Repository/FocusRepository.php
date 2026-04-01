@@ -17,6 +17,21 @@ class FocusRepository extends ServiceEntityRepository
     }
 
     /**
+     * Возвращает следующий фокус (самый приоритетный, new)
+     */
+    public function findNextNew(): ?Focus
+    {
+        return $this->createQueryBuilder('f')
+            ->where('f.status = :status')
+            ->setParameter('status', Focus::STATUS_NEW)
+            ->orderBy('f.priority', 'DESC')
+            ->addOrderBy('f.createdAt', 'ASC')
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
+    /**
      * Возвращает следующий фокус для обработки (самый приоритетный, pending)
      */
     public function findNextPending(): ?Focus
@@ -37,5 +52,18 @@ class FocusRepository extends ServiceEntityRepository
         if ($flush) {
             $this->getEntityManager()->flush();
         }
+    }
+
+    /**
+     * @param string $coll
+     * @return mixed
+     */
+    public function findAllOrderBy(string $coll = 'id')
+    {
+        return $this->createQueryBuilder('f')
+            ->orderBy('f.'.$coll, 'DESC')
+            ->setMaxResults(100)
+            ->getQuery()
+            ->getResult();
     }
 }

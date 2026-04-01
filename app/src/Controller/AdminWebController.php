@@ -2,7 +2,9 @@
 
 namespace App\Controller;
 
+use App\Repository\FocusRepository;
 use App\Repository\MessageRepository;
+use App\Repository\ThoughtRepository;
 use App\Repository\UserRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
@@ -15,10 +17,14 @@ final class AdminWebController extends AbstractController
 
     public function __construct(
         MessageRepository $messageRepository,
-        UserRepository $userRepository
+        UserRepository $userRepository,
+        ThoughtRepository $thoughtRepository,
+        FocusRepository $focusRepository
     ) {
         $this->messageRepository = $messageRepository;
         $this->userRepository = $userRepository;
+        $this->thoughtRepository = $thoughtRepository;
+        $this->focusRepository = $focusRepository;
     }
     #[Route('/admin', name: 'app_admin')]
     public function index(): Response
@@ -41,9 +47,14 @@ final class AdminWebController extends AbstractController
     #[Route('/admin/thoughts', name: 'admin_thoughts')]
     public function thoughts(): Response
     {
-        //$users = $this->userRepository->findAll();
+        $users = $this->userRepository->findAll();
+        $thoughts = $this->thoughtRepository->findAll();
+        rsort($thoughts);
+        $focuses = $this->focusRepository->findAllOrderBy();
         return $this->render('admin_web/thoughts.html.twig', [
-            'thoughts' => null,
+            'thoughts' => $thoughts,
+            'focuses' => $focuses,
+            'users' => $users,
         ]);
     }
 

@@ -39,7 +39,7 @@ watch:
 	docker exec -it ds_php yarn encore dev --watch
 
 worker:
-	docker exec -it ds_php php bin/console app:worker
+	docker exec -it ds_php php php bin/console job:job-loop-worker
 
 route:
 	docker exec -it ds_php php bin/console debug:router $(ARGS)

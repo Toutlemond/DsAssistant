@@ -113,4 +113,14 @@ class MessageRepository extends ServiceEntityRepository
             $this->getEntityManager()->flush();
         }
     }
+
+    public function findMessagesSince(\DateTime $since): array
+    {
+        return $this->createQueryBuilder('m')
+            ->where('m.createdAt >= :since')
+            ->setParameter('since', $since)
+            ->orderBy('m.createdAt', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
 }

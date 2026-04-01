@@ -49,6 +49,9 @@ class Thought
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $prompt = null;
 
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $Essence = null;
+
     public function __construct()
     {
         $this->createdAt = new \DateTimeImmutable();
@@ -77,6 +80,18 @@ class Thought
     public function setPrompt(?string $prompt): static
     {
         $this->prompt = $prompt;
+
+        return $this;
+    }
+
+    public function getEssence(): ?string
+    {
+        return $this->Essence;
+    }
+
+    public function setEssence(?string $Essence): static
+    {
+        $this->Essence = $Essence;
 
         return $this;
     }

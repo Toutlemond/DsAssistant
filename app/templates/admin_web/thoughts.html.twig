@@ -5,14 +5,263 @@
 
 {% block body %}
 
-    <div style="margin-left: 0" class="container">
-        <div class="row">
-            <div class="col-8">
-                <h2>Список Мыслей</h2>
+
+    <div class="row">
+        <div class="col-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Работа с мыслями</h3>
+                </div>
+                <div class="card-body">
+                    <form id="thoughts-form" class="row g-3 align-items-end">
+                        <button type="button" id="think-once-btn" class="btn btn-secondary flex-grow-1">
+                            Подумать один раз!
+                        </button>
+                    </form>
+                </div>
             </div>
-            <div class="col-4">
-                <h2>Список фокусов</h2>
+        </div>
+        <div class="col-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Создать фокус</h3>
+                </div>
+                <div class="card-body">
+                    <form id="focus-form" class="row g-3 align-items-end">
+                        {# Поле 1: Пользователь #}
+                        <div class="col-md-2">
+                            <label for="user" class="form-label">Пользователь</label>
+                            <select id="user" name="user_id" class="form-select">
+                                <option value="">-- Не выбрано --</option>
+                                {% for user in users %}
+                                    <option value="{{ user.id }}">{{ user.firstname }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        {# Поле 2: Тип #}
+                        <div class="col-md-2">
+                            <label for="type" class="form-label">Тип</label>
+                            <select id="type" name="type" class="form-select" required>
+                                <option value="system">system</option>
+                                <option value="user_mention">user_mention</option>
+                                <option value="vision">vision</option>
+                                <option value="internal_thought">internal_thought</option>
+                            </select>
+                        </div>
+
+                        {# Поле 3: Тема #}
+                        <div class="col-md-4">
+                            <label for="topic" class="form-label">Тема</label>
+                            <input type="text" id="topic" name="topic" class="form-control" required>
+                        </div>
+
+                        {# Кнопки #}
+                        <div class="col-md-2 d-flex gap-2">
+                            <button type="submit" class="btn btn-primary flex-grow-1">Отправить</button>
+                            <button type="button" id="random-focus-btn" class="btn btn-secondary flex-grow-1">🎲
+                                Случайный
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
+    <div class="row">
+        <div class="col-12">
+            <div id="response-message" class="mt-3"></div>
+        </div>
+    </div>
+
+            <div class="row">
+        <div class="col-6">
+            <h2>Список Мыслей</h2>
+            <table class="table">
+                <thead>
+                <tr>
+                    <th style="width: 20px">id</th>
+                    <th style="width: 20px">User</th>
+                    <th style="width: 20px">Фокус</th>
+                    <th>Type</th>
+                    <th>Created_at</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for thought in thoughts %}
+                    <tr>
+                        <td>{{ thought.id }}</td>
+                        <td>
+                            {% if focuse.user.getId is defined %}
+                                <a href="{{ path('admin_user_messages', {userId: thought.user.getId()}) }}">{{ thought.user.getUsername() }}</a>
+                            {% else %}
+                                Не указан
+                            {% endif %}
+                        </td>
+                        <td>{{ thought.getFocus.getId }}</td>
+                        <td>{{ thought.getType() }}</td>
+                        <td>{{ thought.getCreatedAt()|date("Y-m-d H:i:s") }}</td>
+                    </tr>
+                    <tr>
+                        <td colspan="6">
+                            <h4>Фокус</h4>
+                            {{ thought.getFocus.getTopic }}
+                            <div class="collapse" id="collapseExample{{ thought.getFocus.getId }}">
+                            <p>
+                                {{ thought.getPrompt() }}
+                            </p>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="6">
+                            <h4>Суть</h4>
+                            <p>
+                                {{ thought.getEssence() }}
+                            </p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="6">
+                            <h4>Мысль</h4>
+                            <p>
+                                {{ thought.getContent() }}
+                            </p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="6">
+                            <hr>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="col-5">
+
+            <h2>Список фокусов</h2>
+            <table class="table">
+                <thead>
+                <tr>
+                    <th style="width: 20px">id</th>
+                    <th style="width: 20px">User</th>
+                    <th style="width: 20px">Фокус</th>
+                    <th>Type</th>
+                    <th>Статус</th>
+                    <th>Created_at</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for focuse in focuses %}
+                    <tr>
+                        <td>{{ focuse.id }}</td>
+                        <td>
+                            {% if focuse.user.getId is defined %}
+                                <a href="{{ path('admin_user_messages', {userId: focuse.user.getId()}) }}">{{ focuse.user.getFirstname() }}</a>
+                            {% else %}
+                                Не указан
+                            {% endif %}
+                        </td>
+                        <td>{{ focuse.getSource }}</td>
+                        <td>{{ focuse.getTopic() }}</td>
+                        <td>{{ focuse.getStatus() }}</td>
+                        <td>{{ focuse.getCreatedAt()|date("Y-m-d H:i:s") }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+
+    <script>
+        document.getElementById('focus-form').addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            const formData = new FormData(this);
+            const url = '{{ path('thinking_create_focus') }}';
+
+            fetch(url, {
+                method: 'POST',
+                body: formData,
+                headers: {}
+            })
+                .then(response => response.json())
+                .then(data => {
+                    const messageDiv = document.getElementById('response-message');
+                    if (data.success) {
+                        messageDiv.innerHTML = '<div class="alert alert-success">' + data.message + '</div>';
+                        // Очистить форму
+                        document.getElementById('focus-form').reset();
+                    } else {
+                        messageDiv.innerHTML = '<div class="alert alert-danger">Ошибка: ' + data.message + '</div>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка:', error);
+                    document.getElementById('response-message').innerHTML = '<div class="alert alert-danger">Ошибка отправки</div>';
+                });
+        });
+        document.getElementById('random-focus-btn').addEventListener('click', function () {
+            const url = '{{ path('thinking_create_random_focus') }}';
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    const messageDiv = document.getElementById('response-message');
+                    if (data.success) {
+                        messageDiv.innerHTML = '<div class="alert alert-success">' + data.message + '</div>';
+                        console.log('Создан фокус:', data.data);
+                    } else {
+                        messageDiv.innerHTML = '<div class="alert alert-danger">Ошибка: ' + data.message + '</div>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка:', error);
+                    document.getElementById('response-message').innerHTML = '<div class="alert alert-danger">Ошибка при создании случайного фокуса</div>';
+                });
+        });
+
+        document.getElementById('think-once-btn').addEventListener('click', function () {
+            const url = '{{ path('thinking_think_once') }}';
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    const messageDiv = document.getElementById('response-message');
+                    if (data.success) {
+                        messageDiv.innerHTML = '<div class="alert alert-success">' + data.message + '</div>';
+                    } else {
+                        messageDiv.innerHTML = '<div class="alert alert-danger">Ошибка: ' + data.message + '</div>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка:', error);
+                    document.getElementById('response-message').innerHTML = '<div class="alert alert-danger">Ошибка при создании случайного фокуса</div>';
+                });
+        });
+    </script>
+    <style>
+        .table {
+            --bs-table-color-type: initial;
+            --bs-table-bg-type: #e1e1e1;
+            --bs-table-color-state: initial;
+            --bs-table-bg-state: initial;
+        }
+        .card {
+            --bs-card-bg: var(--bs-table-bg-type);
+        }
+
+</style>
 {% endblock %}

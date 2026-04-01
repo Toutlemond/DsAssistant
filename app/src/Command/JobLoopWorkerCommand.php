@@ -10,7 +10,9 @@ use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Process\Process;
+
 #[AsCommand(
     name: 'job:job-loop-worker',
     description: 'Universal worker for job loops',
@@ -22,8 +24,9 @@ class JobLoopWorkerCommand extends Command
 
     public function __construct(
         private JobLoopRepository $jobLoopRepository,
-        private LoggerInterface $jobloopLogger
-    ) {
+        private LoggerInterface   $jobloopLogger
+    )
+    {
         parent::__construct();
     }
 
@@ -34,15 +37,15 @@ class JobLoopWorkerCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $output->writeln('Starting universal job loop worker...');
-$i = 0;
+        $io = new SymfonyStyle($input, $output);
+        $io->section('Starting universal job loop worker...');
+        $i = 0;
         while (true) {
             $i++;
-            echo 'JobLoopWorkerCommandIteration: ' . $i . PHP_EOL;
+            $io->info( 'JobLoopWorkerCommandIteration: ' . $i );
             try {
                 $this->processJobLoops($output);
                 sleep(2); // Проверяем каждую секунду
-
             } catch (\Exception $e) {
                 $this->jobloopLogger->error('Error in job loop worker', [
                     'error' => $e->getMessage()
@@ -58,37 +61,24 @@ $i = 0;
     {
         // Очищаем кеш EntityManager перед каждым циклом
         $this->jobLoopRepository->getEntityManager()->clear();
-
         $allLoops = $this->jobLoopRepository->findAll();
-        print_r($allLoops);
-
-
         /** @var JobLoop $jobLoop */
         foreach ($allLoops as $jobLoop) {
-
-            echo $jobLoop->getCommand() . "\n";
             $currentStatus = $this->getCurrentJobStatus($jobLoop);
-
-            print_r($currentStatus);
-            echo PHP_EOL;
             if ($jobLoop->isActive() && !$currentStatus['isRunning']) {
-                echo 'Должен работать, но не работает'.PHP_EOL;
-                // Должен работать, но не работает
+                $message =  'Должен работать, но не работает';
                 $this->ensureJobLoopRunning($jobLoop, $output);
             } elseif (!$jobLoop->isActive() && $currentStatus['isRunning']) {
-                echo 'Не должен работать, но работает'.PHP_EOL;
-                // Не должен работать, но работает
+                $message = 'Не должен работать, но работает' ;
                 $this->ensureJobLoopStopped3($jobLoop, $output);
             } elseif ($jobLoop->isActive() && $currentStatus['isRunning']) {
-                echo 'Должен работать и работает - логируем'.PHP_EOL;
-                // Должен работать и работает - логируем
-                $this->jobloopLogger->debug('Job loop is running correctly', [
-                    'command' => $jobLoop->getCommand(),
-                    'pid' => $currentStatus['pid']
-                ]);
+                $message = 'Должен работать и работает - логируем' ;
+            } else {
+                $message = 'Остальные случаи - ничего не делаем';
             }
-            echo 'Остальные случаи - ничего не делаем'.PHP_EOL;
-            // Остальные случаи - ничего не делаем
+            $output->writeln('Command: ' . $jobLoop->getCommand());
+            $output->writeln('Statuses : ' . implode(',',$currentStatus));
+            $output->writeln('Message : ' .$message);
         }
     }
 
@@ -111,14 +101,12 @@ $i = 0;
         }
 
         $pid = file_get_contents($pidFile);
-        echo 'pid: ' . $pid . PHP_EOL;
         if (!$pid) {
             unlink($pidFile);
             return null;
         }
 
         $isRunning = posix_kill($pid, 0);
-        echo 'isRunning: ' . $isRunning . PHP_EOL;
         if (!$isRunning) {
             unlink($pidFile);
             return null;
@@ -130,51 +118,6 @@ $i = 0;
             'isRunning' => true
         ];
     }
-
-    private function ensureJobLoopStopped(JobLoop $jobLoop, OutputInterface $output): void
-    {
-        $processInfo = $this->getProcessInfo($jobLoop);
-
-        if ($processInfo && $processInfo['isRunning']) {
-            // Процесс работает - останавливаем
-            posix_kill($processInfo['pid'], SIGTERM);
-            unlink($processInfo['pidFile']);
-
-            $this->jobloopLogger->info('Stopped inactive job loop', [
-                'command' => $jobLoop->getCommand(),
-                'pid' => $processInfo['pid']
-            ]);
-
-            $output->writeln(sprintf('Stopped inactive job: %s (PID: %d)',
-                $jobLoop->getCommand(), $processInfo['pid']));
-        }
-    }
-    private function ensureJobLoopStopped2(JobLoop $jobLoop, OutputInterface $output): void
-    {
-        $processInfo = $this->getProcessInfo($jobLoop);
-
-        if ($processInfo && $processInfo['isRunning']) {
-            try {
-                // Пробуем убить через Process
-                $process = Process::fromShellCommandline(sprintf('kill %d', $processInfo['pid']));
-                $process->run();
-
-                if ($process->isSuccessful()) {
-                    $output->writeln('Process killed successfully via kill command');
-                } else {
-                    $output->writeln('Kill command failed: ' . $process->getErrorOutput());
-                }
-            } catch (\Exception $e) {
-                $output->writeln('Exception killing process: ' . $e->getMessage());
-            }
-
-            // Всегда удаляем PID файл
-            if (file_exists($processInfo['pidFile'])) {
-                unlink($processInfo['pidFile']);
-            }
-        }
-    }
-
 
     private function ensureJobLoopStopped3(JobLoop $jobLoop, OutputInterface $output): void
     {
@@ -222,6 +165,7 @@ $i = 0;
             exec("kill -9 $pid"); // SIGKILL для зомби
         }
     }
+
     private function ensureJobLoopRunning(JobLoop $jobLoop, OutputInterface $output): void
     {
         $processInfo = $this->getProcessInfo($jobLoop);
